@@ -338,7 +338,6 @@ pipeline {
                         dir('apps/frontend') {
                             sh '''
                                 set -e
-                    cd gourmet-flow
 
                                 if npm run | grep -q "test"; then
                                     npm test
