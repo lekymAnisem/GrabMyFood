@@ -13,21 +13,22 @@ pipeline {
     }
 
     environment {
-        AWS_REGION    = 'ap-southeast-2'
-        APP_NAME      = 'GrabMyFood'
-        ENVIRONMENT   = 'dev'
+        AWS_REGION     = 'ap-southeast-2'
+        APP_NAME       = 'GrabMyFood'
+        APP_NAME_LOWER = APP_NAME.toLowerCase()
+        ENVIRONMENT    = 'dev'
 
-        ECR_API_GATEWAY   = "${APP_NAME}-${ENVIRONMENT}-api-gateway"
-        ECR_AUTH_SERVICE  = "${APP_NAME}-${ENVIRONMENT}-auth-service"
-        ECR_USER_SERVICE  = "${APP_NAME}-${ENVIRONMENT}-user-service"
-        ECR_RESTAURANT_SERVICE = "${APP_NAME}-${ENVIRONMENT}-restaurant-service"
-        ECR_MENU_SERVICE  = "${APP_NAME}-${ENVIRONMENT}-menu-service"
-        ECR_CART_SERVICE  = "${APP_NAME}-${ENVIRONMENT}-cart-service"
-        ECR_ORDER_SERVICE = "${APP_NAME}-${ENVIRONMENT}-order-service"
-        ECR_PAYMENT_SERVICE = "${APP_NAME}-${ENVIRONMENT}-payment-service"
-        ECR_DELIVERY_SERVICE = "${APP_NAME}-${ENVIRONMENT}-delivery-service"
-        ECR_FRONTEND      = "${APP_NAME}-${ENVIRONMENT}-frontend"
-        EKS_CLUSTER       = "MyGrab-${ENVIRONMENT}-EKS"
+        ECR_API_GATEWAY   = "${APP_NAME_LOWER}-${ENVIRONMENT}-api-gateway"
+        ECR_AUTH_SERVICE  = "${APP_NAME_LOWER}-${ENVIRONMENT}-auth-service"
+        ECR_USER_SERVICE  = "${APP_NAME_LOWER}-${ENVIRONMENT}-user-service"
+        ECR_RESTAURANT_SERVICE = "${APP_NAME_LOWER}-${ENVIRONMENT}-restaurant-service"
+        ECR_MENU_SERVICE  = "${APP_NAME_LOWER}-${ENVIRONMENT}-menu-service"
+        ECR_CART_SERVICE  = "${APP_NAME_LOWER}-${ENVIRONMENT}-cart-service"
+        ECR_ORDER_SERVICE = "${APP_NAME_LOWER}-${ENVIRONMENT}-order-service"
+        ECR_PAYMENT_SERVICE = "${APP_NAME_LOWER}-${ENVIRONMENT}-payment-service"
+        ECR_DELIVERY_SERVICE = "${APP_NAME_LOWER}-${ENVIRONMENT}-delivery-service"
+        ECR_FRONTEND      = "${APP_NAME_LOWER}-${ENVIRONMENT}-frontend"
+        EKS_CLUSTER       = "mygrab-${ENVIRONMENT}-eks"
 
         K8S_NAMESPACE = 'gourmet-flow'
         IMAGE_TAG     = "${BUILD_NUMBER}"
