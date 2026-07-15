@@ -56,6 +56,8 @@ pipeline {
             steps {
                 sh '''
                     set -e
+                    cd gourmet-flow
+                    cd gourmet-flow
 
                     echo "Current workspace:"
                     pwd
@@ -95,6 +97,7 @@ pipeline {
             steps {
                 sh '''
                     set -e
+                    cd gourmet-flow
 
                     echo "Node version:"
                     node --version
@@ -149,6 +152,7 @@ pipeline {
                 withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
                     sh '''
                         set -e
+                    cd gourmet-flow
 
                         for REPO in \
                             "$ECR_API_GATEWAY" \
@@ -181,6 +185,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             if [ -f package-lock.json ]; then
                                 npm ci
@@ -284,6 +289,7 @@ pipeline {
             steps {
                 sh '''
                     set -e
+                    cd gourmet-flow
 
                     for dir in apps/api-gateway apps/auth-service apps/user-service apps/restaurant-service apps/menu-service apps/cart-service apps/order-service apps/payment-service apps/delivery-service; do
                         if [ -d "$dir" ] && [ -f "$dir/package.json" ]; then
@@ -309,6 +315,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             for dir in apps/api-gateway apps/auth-service apps/user-service apps/restaurant-service apps/menu-service apps/cart-service apps/order-service apps/payment-service apps/delivery-service; do
                                 if [ -d "$dir" ] && [ -f "$dir/package.json" ]; then
@@ -331,6 +338,7 @@ pipeline {
                         dir('apps/frontend') {
                             sh '''
                                 set -e
+                    cd gourmet-flow
 
                                 if npm run | grep -q "test"; then
                                     npm test
@@ -361,6 +369,7 @@ pipeline {
                     withSonarQubeEnv(env.SONAR_SERVER) {
                         sh """
                             set -e
+                    cd gourmet-flow
 
                             echo "SonarScanner location: ${scannerHome}"
 
@@ -395,6 +404,7 @@ pipeline {
                     withSonarQubeEnv(env.SONAR_SERVER) {
                         sh """
                             set -e
+                    cd gourmet-flow
 
                             echo "SonarScanner location: ${scannerHome}"
 
@@ -453,6 +463,7 @@ pipeline {
                 withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
                     sh '''
                         set -e
+                    cd gourmet-flow
 
                         ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
@@ -472,6 +483,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_API_GATEWAY}"
 
@@ -487,6 +499,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_AUTH_SERVICE}"
 
@@ -502,6 +515,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_USER_SERVICE}"
 
@@ -517,6 +531,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_RESTAURANT_SERVICE}"
 
@@ -532,6 +547,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_MENU_SERVICE}"
 
@@ -547,6 +563,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_CART_SERVICE}"
 
@@ -562,6 +579,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_ORDER_SERVICE}"
 
@@ -577,6 +595,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_PAYMENT_SERVICE}"
 
@@ -592,6 +611,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_DELIVERY_SERVICE}"
 
@@ -607,6 +627,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND}"
 
@@ -901,6 +922,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_API_GATEWAY}"
 
@@ -914,6 +936,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_AUTH_SERVICE}"
 
@@ -927,6 +950,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_USER_SERVICE}"
 
@@ -940,6 +964,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_RESTAURANT_SERVICE}"
 
@@ -953,6 +978,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_MENU_SERVICE}"
 
@@ -966,6 +992,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_CART_SERVICE}"
 
@@ -979,6 +1006,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_ORDER_SERVICE}"
 
@@ -992,6 +1020,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_PAYMENT_SERVICE}"
 
@@ -1005,6 +1034,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_DELIVERY_SERVICE}"
 
@@ -1018,6 +1048,7 @@ pipeline {
                     steps {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND}"
 
@@ -1034,6 +1065,7 @@ pipeline {
                 withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
                     sh '''
                         set -e
+                    cd gourmet-flow
 
                         aws eks update-kubeconfig \
                             --name "$EKS_CLUSTER" \
@@ -1050,6 +1082,7 @@ pipeline {
             steps {
                 sh '''
                     set -e
+                    cd gourmet-flow
 
                     ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
@@ -1111,6 +1144,7 @@ pipeline {
                 withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
                     sh '''
                         set -e
+                    cd gourmet-flow
 
                         kubectl apply -f rendered-k8s/namespace.yaml
 
@@ -1143,6 +1177,7 @@ pipeline {
                     timeout(time: 10, unit: 'MINUTES') {
                         sh '''
                             set -e
+                    cd gourmet-flow
 
                             for deploy in api-gateway auth-service user-service restaurant-service menu-service cart-service order-service payment-service delivery-service frontend; do
                                 kubectl rollout status \
