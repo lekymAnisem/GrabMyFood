@@ -8,3 +8,6 @@ build
 coverage
 .turbo
 *.tsbuildinfo
+infra/terraform/.terraform/
+*.tfstate
+*.tfstate.backup
