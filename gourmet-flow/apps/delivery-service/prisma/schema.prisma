@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DELIVERY_DATABASE_URL")
+}
+
+model Delivery {
+  id            String   @id @default(uuid())
+  orderId       String   @unique
+  driverId      String?
+  driverName    String?
+  driverRating  Float?
+  driverOrders  Int?
+  driverPhoto   String?
+  status        String   @default("WAITING_FOR_RESTAURANT")
+  estimatedMinutes Int?
+  lat           Float?
+  lng           Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([orderId])
+}

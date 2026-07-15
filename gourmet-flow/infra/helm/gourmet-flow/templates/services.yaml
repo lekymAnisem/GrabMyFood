@@ -1,0 +1,26 @@
+{{- range $key, $svc := .Values.services }}
+{{- if $svc.enabled }}
+{{- $name := $svc.name | default $key }}
+{{- $component := $key }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ $.Values.namespace }}
+  labels:
+    {{- include "gourmet-flow.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
+spec:
+  selector:
+    app.kubernetes.io/name: {{ include "gourmet-flow.name" $ }}
+    app.kubernetes.io/component: {{ $component }}
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+  ports:
+    - port: {{ $svc.port }}
+      targetPort: {{ $svc.port }}
+      protocol: TCP
+      name: http
+  type: {{ $svc.serviceType | default "ClusterIP" }}
+{{- end }}
+{{- end }}

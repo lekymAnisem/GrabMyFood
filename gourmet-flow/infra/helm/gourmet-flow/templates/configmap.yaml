@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.global.configMapName | default (printf "%s-config" (include "gourmet-flow.fullname" .)) }}
+  namespace: {{ .Values.namespace }}
+  labels: {{ include "gourmet-flow.labels" . | nindent 4 }}
+data:
+  NODE_ENV: "{{ .Values.global.nodeEnv }}"
+  JWT_ACCESS_EXPIRATION: "{{ .Values.global.jwtAccessExpiration }}"
+  JWT_REFRESH_EXPIRATION: "{{ .Values.global.jwtRefreshExpiration }}"
+
+  AUTH_SERVICE_URL: "http://{{ .Values.services.authService.name }}:{{ .Values.services.authService.port }}"
+  USER_SERVICE_URL: "http://{{ .Values.services.userService.name }}:{{ .Values.services.userService.port }}"
+  RESTAURANT_SERVICE_URL: "http://{{ .Values.services.restaurantService.name }}:{{ .Values.services.restaurantService.port }}"
+  MENU_SERVICE_URL: "http://{{ .Values.services.menuService.name }}:{{ .Values.services.menuService.port }}"
+  CART_SERVICE_URL: "http://{{ .Values.services.cartService.name }}:{{ .Values.services.cartService.port }}"
+  ORDER_SERVICE_URL: "http://{{ .Values.services.orderService.name }}:{{ .Values.services.orderService.port }}"
+  PAYMENT_SERVICE_URL: "http://{{ .Values.services.paymentService.name }}:{{ .Values.services.paymentService.port }}"
+  DELIVERY_SERVICE_URL: "http://{{ .Values.services.deliveryService.name }}:{{ .Values.services.deliveryService.port }}"

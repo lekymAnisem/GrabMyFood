@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("MENU_DATABASE_URL")
+}
+
+model MenuCategory {
+  id           String   @id @default(uuid())
+  restaurantId String
+  name         String
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  menuItems MenuItem[]
+
+  @@index([restaurantId])
+}
+
+model MenuItem {
+  id            String   @id @default(uuid())
+  restaurantId  String
+  categoryId    String
+  name          String
+  description   String
+  price         Float
+  imageUrl      String
+  calories      Int?
+  dietaryTags   String[]
+  isAvailable   Boolean  @default(true)
+  isFeatured    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  category MenuCategory @relation(fields: [categoryId], references: [id])
+  addOns   AddOn[]
+
+  @@index([restaurantId])
+}
+
+model AddOn {
+  id        String   @id @default(uuid())
+  itemId    String
+  name      String
+  price     Float
+  createdAt DateTime @default(now())
+
+  menuItem MenuItem @relation(fields: [itemId], references: [id])
+
+  @@index([itemId])
+}

@@ -1,0 +1,297 @@
+/*
+ * Jenkins Pipeline for Gourmet Flow Terraform Infrastructure
+ *
+ * Parameters override the defaults in variables.tf.
+ * Pipeline stages: init → validate → plan → (approval) → apply
+ * Set TERRAFORM_DESTROY=true for a destructive teardown.
+ *
+ * Required Jenkins plugins:
+ *   - Pipeline, Credentials Binding
+ *
+ * Required Jenkins credentials (ID: aws-creds):
+ *   - Kind: "AWS Credentials" or "Secret Text"
+ *   - Environment vars: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+ *
+ * The agent runs a hashicorp/terraform Docker image, so no Terraform
+ * binary is needed on the Jenkins controller or agent nodes.
+ */
+
+def TF_DIR = 'infra/terraform'
+def TFVARS_FILE = 'terraform.tfvars'
+
+pipeline {
+  agent {
+    docker {
+      image 'hashicorp/terraform:1.6'
+      args '-v /var/run/docker.sock:/var/run/docker.sock'
+    }
+  }
+
+  parameters {
+    string(
+      name: 'AWS_REGION',
+      defaultValue: 'ap-southeast-2',
+      description: 'AWS region to deploy into'
+    )
+    string(
+      name: 'ENVIRONMENT',
+      defaultValue: 'production',
+      description: 'Deployment environment used for resource naming'
+    )
+    string(
+      name: 'APP_NAME',
+      defaultValue: 'GrabMyFood',
+      description: 'Application name used for resource naming'
+    )
+    string(
+      name: 'SSH_KEY_NAME',
+      defaultValue: 'letshop-key.pem',
+      description: 'Name of an existing EC2 key pair for SSH access'
+    )
+    string(
+      name: 'EKS_VERSION',
+      defaultValue: '1.30',
+      description: 'EKS Kubernetes version'
+    )
+    string(
+      name: 'EKS_ADMIN_ROLE_ARN',
+      defaultValue: '',
+      description: 'IAM role ARN to grant admin access to the EKS cluster'
+    )
+    booleanParam(
+      name: 'TERRAFORM_DESTROY',
+      defaultValue: false,
+      description: '⚠️  DESTROY all infrastructure (requires approval)'
+    )
+  }
+
+  environment {
+    AWS_DEFAULT_REGION = "${params.AWS_REGION}"
+    TF_VAR_aws_region  = "${params.AWS_REGION}"
+    TF_VAR_environment = "${params.ENVIRONMENT}"
+    TF_VAR_app_name    = "${params.APP_NAME}"
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Setup Environment') {
+      steps {
+        script {
+          dir(TF_DIR) {
+            // Generate terraform.tfvars from job parameters
+            writeFile file: TFVARS_FILE, text: """
+aws_region     = "${params.AWS_REGION}"
+environment    = "${params.ENVIRONMENT}"
+app_name       = "${params.APP_NAME}"
+ubuntu_ami_id  = "ami-06259b63260eddc13"
+
+vpc_cidr            = "10.0.0.0/16"
+public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+
+ssh_key_name              = "${params.SSH_KEY_NAME}"
+admin_allowed_cidr_blocks = ["0.0.0.0/0"]
+
+monitoring_allowed_cidr_blocks = ["0.0.0.0/0"]
+monitoring_instance_type       = "c7i-flex.large"
+monitoring_root_volume_size    = 8
+
+prometheus_enabled = true
+prometheus_version = "2.51.2"
+
+grafana_enabled        = true
+grafana_admin_password = ""
+
+alertmanager_enabled = false
+alertmanager_version = "0.27.0"
+
+ecr_image_tag_mutability = "MUTABLE"
+ecr_scan_on_push         = true
+ecr_force_delete         = true
+
+eks_enabled                   = true
+eks_version                   = "${params.EKS_VERSION}"
+eks_public_access_cidr_blocks = ["0.0.0.0/0"]
+eks_node_instance_types       = ["c7i-flex.large"]
+eks_node_capacity_type        = "ON_DEMAND"
+eks_node_disk_size            = 20
+eks_node_min_size             = 1
+eks_node_desired_size         = 2
+eks_node_max_size             = 3
+eks_admin_role_arn            = "${params.EKS_ADMIN_ROLE_ARN}"
+"""
+            echo "Generated terraform.tfvars for environment: ${params.ENVIRONMENT}"
+          }
+        }
+      }
+    }
+
+    stage('Terraform Init') {
+      steps {
+        withCredentials([
+          [$class: 'AmazonWebServicesCredentialsBinding',
+           credentialsId: 'aws-creds',
+           accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+           secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']
+        ]) {
+          dir(TF_DIR) {
+            sh """
+              terraform init \
+                -backend-config="bucket=${params.APP_NAME}-${params.ENVIRONMENT}-terraform-state" \
+                -backend-config="key=infra/terraform.tfstate" \
+                -backend-config="region=${params.AWS_REGION}" \
+                -reconfigure
+            """
+          }
+        }
+      }
+    }
+
+    stage('Terraform Validate') {
+      steps {
+        dir(TF_DIR) {
+          sh 'terraform fmt -check -diff -recursive || true'
+          sh 'terraform validate'
+        }
+      }
+    }
+
+    stage('Terraform Plan') {
+      steps {
+        withCredentials([
+          [$class: 'AmazonWebServicesCredentialsBinding',
+           credentialsId: 'aws-creds',
+           accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+           secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']
+        ]) {
+          dir(TF_DIR) {
+            sh """
+              terraform plan \
+                -var-file=${TFVARS_FILE} \
+                -out=tfplan \
+                -detailed-exitcode
+            """
+          }
+        }
+      }
+      post {
+        success {
+          script {
+            dir(TF_DIR) {
+              sh 'terraform show -no-color tfplan > tfplan.txt'
+              archiveArtifacts artifacts: 'infra/terraform/tfplan.txt',
+                               fingerprint: true
+            }
+          }
+        }
+      }
+    }
+
+    stage('Approval') {
+      when {
+        expression { return params.TERRAFORM_DESTROY == false }
+      }
+      steps {
+        script {
+          dir(TF_DIR) {
+            sh 'grep -E "^(Plan:|No changes.)" tfplan.txt || true'
+          }
+        }
+        input(
+          message: 'Apply this Terraform plan?',
+          ok: 'Apply',
+          submitterParameter: 'approver'
+        )
+      }
+    }
+
+    stage('Terraform Apply') {
+      when {
+        expression { return params.TERRAFORM_DESTROY == false }
+      }
+      steps {
+        withCredentials([
+          [$class: 'AmazonWebServicesCredentialsBinding',
+           credentialsId: 'aws-creds',
+           accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+           secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']
+        ]) {
+          dir(TF_DIR) {
+            sh 'terraform apply -auto-approve tfplan'
+          }
+        }
+      }
+    }
+
+    stage('Destroy Approval') {
+      when {
+        expression { return params.TERRAFORM_DESTROY == true }
+      }
+      steps {
+        script {
+          withCredentials([
+            [$class: 'AmazonWebServicesCredentialsBinding',
+             credentialsId: 'aws-creds',
+             accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+             secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']
+          ]) {
+            dir(TF_DIR) {
+              sh "terraform plan -var-file=${TFVARS_FILE} -destroy -out=destroy-plan"
+              sh 'terraform show -no-color destroy-plan > destroy-plan.txt'
+            }
+          }
+        }
+        input(
+          message: '⚠️  DESTROY ALL INFRASTRUCTURE? This cannot be undone.',
+          ok: 'Yes, destroy everything',
+          submitterParameter: 'approver'
+        )
+      }
+    }
+
+    stage('Terraform Destroy') {
+      when {
+        expression { return params.TERRAFORM_DESTROY == true }
+      }
+      steps {
+        withCredentials([
+          [$class: 'AmazonWebServicesCredentialsBinding',
+           credentialsId: 'aws-creds',
+           accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+           secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']
+        ]) {
+          dir(TF_DIR) {
+            sh 'terraform apply -auto-approve destroy-plan'
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      script {
+        dir(TF_DIR) {
+          sh 'rm -f tfplan tfplan.txt destroy-plan destroy-plan.txt .terraform.lock.hcl 2>/dev/null || true'
+        }
+      }
+      cleanWs()
+    }
+    failure {
+      script {
+        echo 'Pipeline failed. Review the logs above for details.'
+      }
+    }
+    success {
+      script {
+        dir(TF_DIR) {
+          sh 'terraform output'
+        }
+      }
+    }
+  }
+}

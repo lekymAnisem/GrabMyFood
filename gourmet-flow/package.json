@@ -1,0 +1,35 @@
+{
+  "name": "gourmet-flow",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/api-gateway",
+    "dev:frontend": "npm run dev --workspace=apps/frontend",
+    "dev:gateway": "npm run dev --workspace=apps/api-gateway",
+    "dev:auth": "npm run dev --workspace=apps/auth-service",
+    "dev:user": "npm run dev --workspace=apps/user-service",
+    "dev:restaurant": "npm run dev --workspace=apps/restaurant-service",
+    "dev:menu": "npm run dev --workspace=apps/menu-service",
+    "dev:cart": "npm run dev --workspace=apps/cart-service",
+    "dev:order": "npm run dev --workspace=apps/order-service",
+    "dev:payment": "npm run dev --workspace=apps/payment-service",
+    "dev:delivery": "npm run dev --workspace=apps/delivery-service",
+    "build": "npm run build --workspace=apps/frontend",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx --ignore-pattern node_modules --ignore-pattern dist",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\" --ignore-path .gitignore",
+    "test": "npm run test --workspaces --if-present",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\" --ignore-path .gitignore"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "prettier": "^3.2.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  }
+}

@@ -1,0 +1,242 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model UserCredential {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("CUSTOMER")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model UserProfile {
+  id        String   @id @default(uuid())
+  authId    String   @unique
+  name      String
+  email     String   @unique
+  phone     String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  addresses Address[]
+}
+
+model Address {
+  id              String   @id @default(uuid())
+  userId          String
+  label           String
+  street          String
+  city            String
+  postalCode      String?
+  details         String?
+  isDefault       Boolean  @default(false)
+  latitude        Float?
+  longitude       Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  userProfile UserProfile @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Restaurant {
+  id              String   @id @default(uuid())
+  name            String
+  description     String
+  cuisineType     String
+  categories      String[]
+  rating          Float    @default(0)
+  reviewCount     Int      @default(0)
+  deliveryTimeMin Int
+  deliveryTimeMax Int
+  deliveryFee     Float    @default(0)
+  priceLevel      String   @default("$$")
+  imageUrl        String
+  featured        Boolean  @default(false)
+  isAvailable     Boolean  @default(true)
+  address         String
+  phone           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  reviews Review[]
+}
+
+model Review {
+  id           String   @id @default(uuid())
+  restaurantId String
+  userId       String
+  userName     String
+  rating       Int
+  comment      String?
+  createdAt    DateTime @default(now())
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+
+  @@index([restaurantId])
+}
+
+model MenuCategory {
+  id           String   @id @default(uuid())
+  restaurantId String
+  name         String
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  menuItems MenuItem[]
+
+  @@index([restaurantId])
+}
+
+model MenuItem {
+  id            String   @id @default(uuid())
+  restaurantId  String
+  categoryId    String
+  name          String
+  description   String
+  price         Float
+  imageUrl      String
+  calories      Int?
+  dietaryTags   String[]
+  isAvailable   Boolean  @default(true)
+  isFeatured    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  category MenuCategory @relation(fields: [categoryId], references: [id])
+  addOns   AddOn[]
+
+  @@index([restaurantId])
+}
+
+model AddOn {
+  id        String   @id @default(uuid())
+  itemId    String
+  name      String
+  price     Float
+  createdAt DateTime @default(now())
+
+  menuItem MenuItem @relation(fields: [itemId], references: [id])
+
+  @@index([itemId])
+}
+
+model Cart {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  restaurantId String?
+  promoCode    String?
+  discount     Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items CartItem[]
+}
+
+model CartItem {
+  id                 String   @id @default(uuid())
+  cartId             String
+  menuItemId         String
+  name               String
+  price              Float
+  quantity           Int      @default(1)
+  imageUrl           String?
+  specialInstructions String?
+  selectedAddOns     Json?
+  createdAt          DateTime @default(now())
+
+  cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  @@index([cartId])
+}
+
+model Order {
+  id                String   @id @default(uuid())
+  userId            String
+  restaurantId      String
+  restaurantName    String
+  status            String   @default("PENDING_PAYMENT")
+  subtotal          Float
+  deliveryFee       Float    @default(0)
+  platformFee       Float    @default(0)
+  discount          Float    @default(0)
+  total             Float
+  promoCode         String?
+  deliveryAddress   Json?
+  paymentMethod     String?
+  specialInstructions String?
+  paymentId         String?
+  deliveryId        String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  items OrderItem[]
+
+  @@index([userId])
+}
+
+model OrderItem {
+  id        String @id @default(uuid())
+  orderId   String
+  name      String
+  price     Float
+  quantity  Int
+  notes     String?
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+}
+
+model Payment {
+  id              String   @id @default(uuid())
+  orderId         String
+  amount          Float
+  currency        String   @default("USD")
+  status          String   @default("PENDING")
+  paymentMethod   String?
+  cardLastFour    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([orderId])
+}
+
+model Delivery {
+  id            String   @id @default(uuid())
+  orderId       String   @unique
+  driverId      String?
+  driverName    String?
+  driverRating  Float?
+  driverOrders  Int?
+  driverPhoto   String?
+  status        String   @default("WAITING_FOR_RESTAURANT")
+  estimatedMinutes Int?
+  lat           Float?
+  lng           Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([orderId])
+}

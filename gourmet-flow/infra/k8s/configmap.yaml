@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gourmet-flow-config
+  namespace: gourmet-flow
+data:
+  NODE_ENV: "production"
+  JWT_ACCESS_EXPIRATION: "15m"
+  JWT_REFRESH_EXPIRATION: "7d"
+
+  AUTH_SERVICE_URL: "http://auth-service:4001"
+  USER_SERVICE_URL: "http://user-service:4002"
+  RESTAURANT_SERVICE_URL: "http://restaurant-service:4003"
+  MENU_SERVICE_URL: "http://menu-service:4004"
+  CART_SERVICE_URL: "http://cart-service:4005"
+  ORDER_SERVICE_URL: "http://order-service:4006"
+  PAYMENT_SERVICE_URL: "http://payment-service:4007"
+  DELIVERY_SERVICE_URL: "http://delivery-service:4008"

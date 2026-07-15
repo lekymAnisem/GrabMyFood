@@ -1,0 +1,165 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gf-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: gourmet-auth
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api-gateway:
+    build:
+      context: ./apps/api-gateway
+      dockerfile: Dockerfile
+    container_name: gf-gateway
+    ports:
+      - "4000:4000"
+    env_file: .env
+    depends_on:
+      - auth-service
+      - user-service
+      - restaurant-service
+      - menu-service
+      - cart-service
+      - order-service
+      - payment-service
+      - delivery-service
+
+  auth-service:
+    build:
+      context: ./apps/auth-service
+      dockerfile: Dockerfile
+    container_name: gf-auth
+    ports:
+      - "4001:4001"
+    env_file: .env
+    environment:
+      AUTH_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/gourmet-auth
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  user-service:
+    build:
+      context: ./apps/user-service
+      dockerfile: Dockerfile
+    container_name: gf-user
+    ports:
+      - "4002:4002"
+    env_file: .env
+    environment:
+      USER_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/gourmet-user
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  restaurant-service:
+    build:
+      context: ./apps/restaurant-service
+      dockerfile: Dockerfile
+    container_name: gf-restaurant
+    ports:
+      - "4003:4003"
+    env_file: .env
+    environment:
+      RESTAURANT_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/gourmet-restaurant
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  menu-service:
+    build:
+      context: ./apps/menu-service
+      dockerfile: Dockerfile
+    container_name: gf-menu
+    ports:
+      - "4004:4004"
+    env_file: .env
+    environment:
+      MENU_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/gourmet-menu
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  cart-service:
+    build:
+      context: ./apps/cart-service
+      dockerfile: Dockerfile
+    container_name: gf-cart
+    ports:
+      - "4005:4005"
+    env_file: .env
+    environment:
+      CART_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/gourmet-cart
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  order-service:
+    build:
+      context: ./apps/order-service
+      dockerfile: Dockerfile
+    container_name: gf-order
+    ports:
+      - "4006:4006"
+    env_file: .env
+    environment:
+      ORDER_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/gourmet-order
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  payment-service:
+    build:
+      context: ./apps/payment-service
+      dockerfile: Dockerfile
+    container_name: gf-payment
+    ports:
+      - "4007:4007"
+    env_file: .env
+    environment:
+      PAYMENT_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/gourmet-payment
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  delivery-service:
+    build:
+      context: ./apps/delivery-service
+      dockerfile: Dockerfile
+    container_name: gf-delivery
+    ports:
+      - "4008:4008"
+    env_file: .env
+    environment:
+      DELIVERY_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/gourmet-delivery
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    container_name: gf-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_GATEWAY_URL: http://localhost:4000/api
+    depends_on:
+      - api-gateway
+
+volumes:
+  pgdata:

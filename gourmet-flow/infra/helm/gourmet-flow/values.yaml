@@ -1,0 +1,329 @@
+# ── Global settings ────────────────────────────────────────────────
+namespace: gourmet-flow
+nameOverride: ""
+fullnameOverride: ""
+
+imageRegistry: ""
+
+global:
+  nodeEnv: "production"
+  jwtAccessExpiration: "15m"
+  jwtRefreshExpiration: "7d"
+  configMapName: "gourmet-flow-config"
+  secretName: "gourmet-flow-secrets"
+
+# ── Secrets (store in Vault or sealed-secrets in production) ──────
+secrets:
+  jwtSecret: "change-me"
+  jwtRefreshSecret: "change-me"
+  authDatabaseUrl: "postgresql://user:pass@host:5432/auth"
+  userDatabaseUrl: "postgresql://user:pass@host:5432/user"
+  restaurantDatabaseUrl: "postgresql://user:pass@host:5432/restaurant"
+  menuDatabaseUrl: "postgresql://user:pass@host:5432/menu"
+  cartDatabaseUrl: "postgresql://user:pass@host:5432/cart"
+  orderDatabaseUrl: "postgresql://user:pass@host:5432/order"
+  paymentDatabaseUrl: "postgresql://user:pass@host:5432/payment"
+  deliveryDatabaseUrl: "postgresql://user:pass@host:5432/delivery"
+
+# ── Services ──────────────────────────────────────────────────────
+# Each key becomes the component label.  The generic deployment.yaml
+# and service.yaml templates iterate over this map.
+services:
+  apiGateway:
+    enabled: true
+    name: api-gateway
+    port: 4000
+    replicas: 2
+    serviceType: ClusterIP
+    image:
+      repository: letshop-production-backend
+      tag: "api-gateway-latest"
+      pullPolicy: IfNotPresent
+    envVars:
+      PORT: "4000"
+    livenessProbe:
+      path: /health
+      initialDelaySeconds: 10
+      periodSeconds: 15
+    readinessProbe:
+      path: /ready
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "300m"
+        memory: "256Mi"
+
+  authService:
+    enabled: true
+    name: auth-service
+    port: 4001
+    replicas: 2
+    serviceType: ClusterIP
+    image:
+      repository: letshop-production-backend
+      tag: "auth-service-latest"
+      pullPolicy: IfNotPresent
+    envVars:
+      PORT: "4001"
+    livenessProbe:
+      path: /health
+      initialDelaySeconds: 10
+      periodSeconds: 15
+    readinessProbe:
+      path: /ready
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "300m"
+        memory: "256Mi"
+
+  userService:
+    enabled: true
+    name: user-service
+    port: 4002
+    replicas: 2
+    serviceType: ClusterIP
+    image:
+      repository: letshop-production-backend
+      tag: "user-service-latest"
+      pullPolicy: IfNotPresent
+    envVars:
+      PORT: "4002"
+    livenessProbe:
+      path: /health
+      initialDelaySeconds: 10
+      periodSeconds: 15
+    readinessProbe:
+      path: /ready
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "300m"
+        memory: "256Mi"
+
+  restaurantService:
+    enabled: true
+    name: restaurant-service
+    port: 4003
+    replicas: 2
+    serviceType: ClusterIP
+    image:
+      repository: letshop-production-backend
+      tag: "restaurant-service-latest"
+      pullPolicy: IfNotPresent
+    envVars:
+      PORT: "4003"
+    livenessProbe:
+      path: /health
+      initialDelaySeconds: 10
+      periodSeconds: 15
+    readinessProbe:
+      path: /ready
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "300m"
+        memory: "256Mi"
+
+  menuService:
+    enabled: true
+    name: menu-service
+    port: 4004
+    replicas: 2
+    serviceType: ClusterIP
+    image:
+      repository: letshop-production-backend
+      tag: "menu-service-latest"
+      pullPolicy: IfNotPresent
+    envVars:
+      PORT: "4004"
+    livenessProbe:
+      path: /health
+      initialDelaySeconds: 10
+      periodSeconds: 15
+    readinessProbe:
+      path: /ready
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "300m"
+        memory: "256Mi"
+
+  cartService:
+    enabled: true
+    name: cart-service
+    port: 4005
+    replicas: 2
+    serviceType: ClusterIP
+    image:
+      repository: letshop-production-backend
+      tag: "cart-service-latest"
+      pullPolicy: IfNotPresent
+    envVars:
+      PORT: "4005"
+    livenessProbe:
+      path: /health
+      initialDelaySeconds: 10
+      periodSeconds: 15
+    readinessProbe:
+      path: /ready
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "300m"
+        memory: "256Mi"
+
+  orderService:
+    enabled: true
+    name: order-service
+    port: 4006
+    replicas: 2
+    serviceType: ClusterIP
+    image:
+      repository: letshop-production-backend
+      tag: "order-service-latest"
+      pullPolicy: IfNotPresent
+    envVars:
+      PORT: "4006"
+    livenessProbe:
+      path: /health
+      initialDelaySeconds: 10
+      periodSeconds: 15
+    readinessProbe:
+      path: /ready
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "300m"
+        memory: "256Mi"
+
+  paymentService:
+    enabled: true
+    name: payment-service
+    port: 4007
+    replicas: 2
+    serviceType: ClusterIP
+    image:
+      repository: letshop-production-backend
+      tag: "payment-service-latest"
+      pullPolicy: IfNotPresent
+    envVars:
+      PORT: "4007"
+    livenessProbe:
+      path: /health
+      initialDelaySeconds: 10
+      periodSeconds: 15
+    readinessProbe:
+      path: /ready
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "300m"
+        memory: "256Mi"
+
+  deliveryService:
+    enabled: true
+    name: delivery-service
+    port: 4008
+    replicas: 2
+    serviceType: ClusterIP
+    image:
+      repository: letshop-production-backend
+      tag: "delivery-service-latest"
+      pullPolicy: IfNotPresent
+    envVars:
+      PORT: "4008"
+    livenessProbe:
+      path: /health
+      initialDelaySeconds: 10
+      periodSeconds: 15
+    readinessProbe:
+      path: /ready
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "300m"
+        memory: "256Mi"
+
+  frontend:
+    enabled: true
+    name: frontend
+    port: 80
+    replicas: 2
+    serviceType: ClusterIP
+    image:
+      repository: letshop-production-frontend
+      tag: "frontend-latest"
+      pullPolicy: IfNotPresent
+    envVars:
+      VITE_API_GATEWAY_URL: "/api"
+    livenessProbe:
+      path: /
+      initialDelaySeconds: 10
+      periodSeconds: 15
+    readinessProbe:
+      path: /
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "64Mi"
+      limits:
+        cpu: "200m"
+        memory: "128Mi"
+    # Frontend-specific flags consumed by templates
+    nginxConfigMap: "frontend-nginx-config"
+    skipEnvFrom: true
+
+# ── Ingress ──────────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+  rules:
+    - host: gourmet-flow.local
+      paths:
+        - path: /
+          pathType: Prefix
+          serviceName: frontend
+          servicePort: 80
+  tls: []

@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+body {
+  font-family: 'Be Vietnam Pro', sans-serif;
+  background-color: #f3fbfa;
+  color: #151d1d;
+}
+
+.glass-effect {
+  backdrop-filter: blur(12px);
+  background: rgba(255, 252, 249, 0.7);
+  border: 1px solid rgba(226, 27, 112, 0.1);
+}
+
+.glass-nav {
+  backdrop-filter: blur(12px);
+  background: rgba(252, 249, 248, 0.8);
+}
+
+.glass-card {
+  backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(185, 0, 88, 0.1);
+}
+
+.dish-card-shadow {
+  box-shadow: 0 4px 20px rgba(226, 27, 112, 0.04);
+}
+
+.hero-gradient {
+  background: linear-gradient(135deg, #fcf9f8 0%, #fff8fb 100%);
+}
+
+.primary-gradient {
+  background: linear-gradient(135deg, #b90058 0%, #e21b70 100%);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .4; }
+}
+
+.timeline-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.route-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: dash 5s linear forwards;
+}
+
+@keyframes dash {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  border-color: #006a6a !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #006a6a;
+  border-radius: 10px;
+}
+
+.premium-shadow {
+  box-shadow: 0 4px 20px rgba(226, 27, 112, 0.04);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(185, 0, 88, 0.1);
+}
+
+.credit-card-gradient {
+  background: linear-gradient(135deg, #b90058 0%, #e21b70 50%, #ffb1c3 100%);
+}
+
+.button-hover-effect:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(226, 27, 112, 0.4);
+}
