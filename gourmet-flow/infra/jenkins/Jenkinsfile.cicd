@@ -48,7 +48,7 @@ pipeline {
             steps {
                 git branch: 'main',
                     credentialsId: 'github-token',
-                    url: 'https://github.com/lekymAnisem/gourmet-flow.git'
+                    url: 'https://github.com/lekymAnisem/GrabMyFood.git'
             }
         }
 
