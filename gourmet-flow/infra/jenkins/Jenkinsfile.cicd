@@ -482,7 +482,39 @@ pipeline {
                 withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
                     sh '''
                         set -e
-                        aws eks update-kubeconfig --name "$EKS_CLUSTER" --region "$AWS_REGION"
+
+                        aws eks update-kubeconfig \
+                            --name "$EKS_CLUSTER" \
+                            --region "$AWS_REGION"
+
+                        PRINCIPAL_ARN=$(aws sts get-caller-identity --query Arn --output text)
+
+                        if ! aws eks list-access-entries \
+                            --cluster "$EKS_CLUSTER" \
+                            --region "$AWS_REGION" \
+                            --query "accessEntries[?@=='$PRINCIPAL_ARN']" \
+                            --output text | grep -q .; then
+
+                            echo "Adding IAM principal $PRINCIPAL_ARN to EKS cluster access entries..."
+                            aws eks create-access-entry \
+                                --cluster "$EKS_CLUSTER" \
+                                --region "$AWS_REGION" \
+                                --principal-arn "$PRINCIPAL_ARN" \
+                                --type STANDARD
+
+                            aws eks associate-access-policy \
+                                --cluster "$EKS_CLUSTER" \
+                                --region "$AWS_REGION" \
+                                --principal-arn "$PRINCIPAL_ARN" \
+                                --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy \
+                                --access-scope type=cluster
+
+                            echo "Waiting for access to propagate..."
+                            sleep 10
+                        else
+                            echo "IAM principal $PRINCIPAL_ARN already has access."
+                        fi
+
                         kubectl cluster-info
                         kubectl get nodes || true
                     '''
