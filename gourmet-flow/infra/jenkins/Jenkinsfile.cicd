@@ -32,6 +32,7 @@ pipeline {
         EKS_CLUSTER   = 'GrabMyFood-production'
         K8S_NAMESPACE = 'gourmet-flow'
         IMAGE_TAG     = "${BUILD_NUMBER}"
+        KUBECONFIG    = "${WORKSPACE}/.kube/config"
 
         SONAR_SERVER  = 'Sonarserver'
         SONAR_TOOL    = 'SonarQube'
@@ -491,46 +492,59 @@ pipeline {
             steps { pushServiceImage("${ECR_FRONTEND}") }
         }
 
-        stage('Configure EKS Access') {
+        stage('Validate AWS and EKS Access') {
             steps {
                 withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
                     sh '''
                         set -e
 
+                        echo "========================================"
+                        echo " AWS Identity"
+                        echo "========================================"
+                        aws sts get-caller-identity
+
+                        echo ""
+                        echo "========================================"
+                        echo " EKS Cluster Status"
+                        echo "========================================"
+                        aws eks describe-cluster \
+                            --name "$EKS_CLUSTER" \
+                            --region "$AWS_REGION" \
+                            --query 'cluster.{Name:name, Status:status, Version:version, Endpoint:endpoint}' \
+                            --output table
+
+                        echo ""
+                        echo "========================================"
+                        echo " Configure kubeconfig"
+                        echo "========================================"
+                        mkdir -p "$(dirname "$KUBECONFIG")"
+                        rm -f "$KUBECONFIG"
+
                         aws eks update-kubeconfig \
                             --name "$EKS_CLUSTER" \
-                            --region "$AWS_REGION"
-
-                        PRINCIPAL_ARN=$(aws sts get-caller-identity --query Arn --output text)
-
-                        if ! aws eks list-access-entries \
-                            --cluster "$EKS_CLUSTER" \
                             --region "$AWS_REGION" \
-                            --query "accessEntries[?@=='$PRINCIPAL_ARN']" \
-                            --output text | grep -q .; then
+                            --kubeconfig "$KUBECONFIG"
 
-                            echo "Adding IAM principal $PRINCIPAL_ARN to EKS cluster access entries..."
-                            aws eks create-access-entry \
-                                --cluster "$EKS_CLUSTER" \
-                                --region "$AWS_REGION" \
-                                --principal-arn "$PRINCIPAL_ARN" \
-                                --type STANDARD
+                        SERVER=$(kubectl config view --minify \
+                            -o jsonpath='{.clusters[0].cluster.server}')
 
-                            aws eks associate-access-policy \
-                                --cluster "$EKS_CLUSTER" \
-                                --region "$AWS_REGION" \
-                                --principal-arn "$PRINCIPAL_ARN" \
-                                --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy \
-                                --access-scope type=cluster
+                        case "$SERVER" in
+                            https://*.eks.amazonaws.com|https://*.eks.amazonaws.com.cn)
+                                echo "Valid EKS endpoint: $SERVER"
+                                ;;
+                            *)
+                                echo "ERROR: kubeconfig does not point to EKS: $SERVER" >&2
+                                exit 1
+                                ;;
+                        esac
 
-                            echo "Waiting for access to propagate..."
-                            sleep 10
-                        else
-                            echo "IAM principal $PRINCIPAL_ARN already has access."
-                        fi
-
-                        kubectl cluster-info
-                        kubectl get nodes || true
+                        echo ""
+                        echo "========================================"
+                        echo " Verify Kubernetes Permissions"
+                        echo "========================================"
+                        kubectl auth can-i get nodes
+                        kubectl auth can-i create deployments --namespace "$K8S_NAMESPACE"
+                        kubectl get nodes
                     '''
                 }
             }

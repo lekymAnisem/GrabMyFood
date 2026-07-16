@@ -74,3 +74,80 @@ resource "aws_eip" "jenkins" {
   }
 }
 
+# ── Jenkins IAM policy: EKS describe + ECR push ──────────────────────
+
+data "aws_iam_policy_document" "jenkins_eks_ecr" {
+  statement {
+    sid    = "DescribeTargetEKSCluster"
+    effect = "Allow"
+    actions = [
+      "eks:DescribeCluster"
+    ]
+    resources = [
+      "arn:aws:eks:${var.aws_region}:${data.aws_caller_identity.current.account_id}:cluster/${local.name_prefix}"
+    ]
+  }
+
+  statement {
+    sid    = "GetECRAuthToken"
+    effect = "Allow"
+    actions = [
+      "ecr:GetAuthorizationToken"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "ManageProjectECRImages"
+    effect = "Allow"
+    actions = [
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:BatchGetImage",
+      "ecr:InitiateLayerUpload",
+      "ecr:UploadLayerPart",
+      "ecr:CompleteLayerUpload",
+      "ecr:PutImage"
+    ]
+    resources = [
+      "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/${lower(var.app_name)}-*"
+    ]
+  }
+}
+
+resource "aws_iam_policy" "jenkins_eks_ecr" {
+  name   = "${local.name_prefix}-jenkins-eks-ecr-policy"
+  policy = data.aws_iam_policy_document.jenkins_eks_ecr.json
+}
+
+resource "aws_iam_role_policy_attachment" "jenkins_eks_ecr" {
+  role       = aws_iam_role.jenkins.name
+  policy_arn = aws_iam_policy.jenkins_eks_ecr.arn
+}
+
+# ── EKS access entry for Jenkins ─────────────────────────────────────
+
+resource "aws_eks_access_entry" "jenkins" {
+  count = var.eks_enabled ? 1 : 0
+
+  cluster_name  = aws_eks_cluster.this[0].name
+  principal_arn = aws_iam_role.jenkins.arn
+  type          = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "jenkins" {
+  count = var.eks_enabled ? 1 : 0
+
+  cluster_name  = aws_eks_cluster.this[0].name
+  principal_arn = aws_iam_role.jenkins.arn
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+
+  depends_on = [
+    aws_eks_access_entry.jenkins
+  ]
+}
+
