@@ -235,6 +235,8 @@ pipeline {
 
                             echo "SonarScanner: ${scannerHome}"
 
+                            cd gourmet-flow
+
                             "${scannerHome}/bin/sonar-scanner" \
                                 -Dsonar.projectKey=gourmet-flow-backend \
                                 -Dsonar.projectName="Gourmet Flow Backend" \
@@ -267,6 +269,8 @@ pipeline {
                             set -e
 
                             echo "SonarScanner: ${scannerHome}"
+
+                            cd gourmet-flow
 
                             "${scannerHome}/bin/sonar-scanner" \
                                 -Dsonar.projectKey=gourmet-flow-frontend \
