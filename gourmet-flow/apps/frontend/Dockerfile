@@ -4,7 +4,7 @@ ARG VITE_API_GATEWAY_URL
 
 WORKDIR /app
 COPY package.json ./
-RUN npm install --no-cache
+RUN npm install --no-audit --no-fund
 COPY . .
 RUN VITE_API_GATEWAY_URL=${VITE_API_GATEWAY_URL} npm run build
 

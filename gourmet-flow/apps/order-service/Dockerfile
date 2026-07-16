@@ -1,7 +1,7 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json ./
-RUN npm install --no-cache
+RUN npm install --no-audit --no-fund
 COPY . .
 
 FROM node:20-alpine
