@@ -78,19 +78,16 @@ export default function setupProxyRoutes(app) {
     app.use(path, (req, res) => forwardRequest(req, res, target));
   });
 
-  app.get('/health', async (req, res) => {
-    const services = await aggregateHealth();
-    res.json({ status: 'ok', services });
+  app.get('/health', (req, res) => {
+    res.json({ status: 'ok' });
   });
 
-  app.get('/ready', async (req, res) => {
-    const services = await aggregateHealth();
-    const allHealthy = Object.values(services).every(s => s.status === 'healthy');
+  app.get('/ready', (req, res) => {
+    res.json({ status: 'ready' });
+  });
 
-    if (allHealthy) {
-      res.json({ status: 'ready', services });
-    } else {
-      res.status(503).json({ status: 'not ready', services });
-    }
+  app.get('/health/downstream', async (req, res) => {
+    const services = await aggregateHealth();
+    res.json({ status: 'ok', services });
   });
 }
