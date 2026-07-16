@@ -188,7 +188,7 @@ variable "eks_admin_role_arn" {
 variable "jenkins_instance_type" {
   description = "EC2 instance type for the Jenkins server"
   type        = string
-  default     = "c7i-flex.large"
+  default     = "m7i-flex.large"
 }
 
 variable "jenkins_root_volume_size" {

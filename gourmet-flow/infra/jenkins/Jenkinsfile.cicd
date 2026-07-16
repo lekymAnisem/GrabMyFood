@@ -8,32 +8,31 @@ pipeline {
     }
 
     tools {
-        
+        jdk 'jdk21'
         nodejs 'node20'
     }
 
     environment {
-        AWS_REGION     = 'ap-southeast-2'
-        APP_NAME       = 'GrabMyFood'
+        AWS_REGION    = 'ap-southeast-2'
+        APP_NAME      = 'GrabMyFood'
         APP_NAME_LOWER = APP_NAME.toLowerCase()
-        ENVIRONMENT    = 'dev'
+        ENVIRONMENT   = 'dev'
 
-        ECR_API_GATEWAY   = "${APP_NAME_LOWER}-${ENVIRONMENT}-api-gateway"
-        ECR_AUTH_SERVICE  = "${APP_NAME_LOWER}-${ENVIRONMENT}-auth-service"
-        ECR_USER_SERVICE  = "${APP_NAME_LOWER}-${ENVIRONMENT}-user-service"
+        ECR_API_GATEWAY        = "${APP_NAME_LOWER}-${ENVIRONMENT}-api-gateway"
+        ECR_AUTH_SERVICE       = "${APP_NAME_LOWER}-${ENVIRONMENT}-auth-service"
+        ECR_USER_SERVICE       = "${APP_NAME_LOWER}-${ENVIRONMENT}-user-service"
         ECR_RESTAURANT_SERVICE = "${APP_NAME_LOWER}-${ENVIRONMENT}-restaurant-service"
-        ECR_MENU_SERVICE  = "${APP_NAME_LOWER}-${ENVIRONMENT}-menu-service"
-        ECR_CART_SERVICE  = "${APP_NAME_LOWER}-${ENVIRONMENT}-cart-service"
-        ECR_ORDER_SERVICE = "${APP_NAME_LOWER}-${ENVIRONMENT}-order-service"
-        ECR_PAYMENT_SERVICE = "${APP_NAME_LOWER}-${ENVIRONMENT}-payment-service"
-        ECR_DELIVERY_SERVICE = "${APP_NAME_LOWER}-${ENVIRONMENT}-delivery-service"
-        ECR_FRONTEND      = "${APP_NAME_LOWER}-${ENVIRONMENT}-frontend"
-        EKS_CLUSTER       = "mygrab-${ENVIRONMENT}-eks"
+        ECR_MENU_SERVICE       = "${APP_NAME_LOWER}-${ENVIRONMENT}-menu-service"
+        ECR_CART_SERVICE       = "${APP_NAME_LOWER}-${ENVIRONMENT}-cart-service"
+        ECR_ORDER_SERVICE      = "${APP_NAME_LOWER}-${ENVIRONMENT}-order-service"
+        ECR_PAYMENT_SERVICE    = "${APP_NAME_LOWER}-${ENVIRONMENT}-payment-service"
+        ECR_DELIVERY_SERVICE   = "${APP_NAME_LOWER}-${ENVIRONMENT}-delivery-service"
+        ECR_FRONTEND           = "${APP_NAME_LOWER}-${ENVIRONMENT}-frontend"
 
+        EKS_CLUSTER   = 'GrabMyFood-production'
         K8S_NAMESPACE = 'gourmet-flow'
         IMAGE_TAG     = "${BUILD_NUMBER}"
 
-        // Jenkins configuration names
         SONAR_SERVER  = 'Sonarserver'
         SONAR_TOOL    = 'SonarQube'
     }
@@ -55,71 +54,37 @@ pipeline {
 
         stage('Verify Project Structure') {
             steps {
-                sh '''
-                    set -e
-                    cd gourmet-flow
+                dir('gourmet-flow') {
+                    sh '''
+                        set -e
+                        echo "Workspace: $(pwd)"
+                        ls -la
 
-                    echo "Current workspace:"
-                    pwd
+                        for svc in api-gateway auth-service user-service restaurant-service menu-service cart-service order-service payment-service delivery-service frontend; do
+                            test -d "apps/$svc" || { echo "ERROR: apps/$svc not found"; exit 1; }
+                        done
 
-                    echo "Repository contents:"
-                    ls -la
-
-                    test -d apps/api-gateway || {
-                        echo "ERROR: apps/api-gateway directory was not found"
-                        exit 1
-                    }
-
-                    test -d apps/auth-service || {
-                        echo "ERROR: apps/auth-service directory was not found"
-                        exit 1
-                    }
-
-                    test -d apps/frontend || {
-                        echo "ERROR: apps/frontend directory was not found"
-                        exit 1
-                    }
-
-                    test -f package.json || {
-                        echo "ERROR: root package.json was not found"
-                        exit 1
-                    }
-
-                    test -d infra/k8s || {
-                        echo "ERROR: infra/k8s directory was not found"
-                        exit 1
-                    }
-                '''
+                        test -f package.json || { echo "ERROR: root package.json not found"; exit 1; }
+                        test -d infra/k8s    || { echo "ERROR: infra/k8s not found"; exit 1; }
+                    '''
+                }
             }
         }
 
         stage('Verify Required Tools') {
             steps {
-                sh '''
-                    set -e
-                    cd gourmet-flow
-
-                    echo "Node version:"
-                    node --version
-
-                    echo "NPM version:"
-                    npm --version
-
-                    echo "Java version:"
-                    java -version
-
-                    echo "Docker version:"
-                    docker --version
-
-                    echo "AWS CLI version:"
-                    aws --version
-
-                    echo "kubectl version:"
-                    kubectl version --client
-
-                    echo "Trivy version:"
-                    trivy --version
-                '''
+                dir('gourmet-flow') {
+                    sh '''
+                        set -e
+                        echo "Node: $(node --version)"
+                        echo "NPM: $(npm --version)"
+                        java -version
+                        docker --version
+                        aws --version
+                        kubectl version --client
+                        trivy --version
+                    '''
+                }
             }
         }
 
@@ -128,20 +93,11 @@ pipeline {
                 withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
                     script {
                         env.AWS_ACCOUNT_ID = sh(
-                            script: '''
-                                aws sts get-caller-identity \
-                                    --query Account \
-                                    --output text
-                            ''',
+                            script: 'aws sts get-caller-identity --query Account --output text',
                             returnStdout: true
                         ).trim()
-
-                        if (!env.AWS_ACCOUNT_ID) {
-                            error('Unable to retrieve AWS account ID')
-                        }
-
-                        echo "AWS account ID detected: ${env.AWS_ACCOUNT_ID}"
-                        echo "AWS region: ${env.AWS_REGION}"
+                        if (!env.AWS_ACCOUNT_ID) error('Unable to retrieve AWS account ID')
+                        echo "AWS account ID: ${env.AWS_ACCOUNT_ID}, region: ${env.AWS_REGION}"
                     }
                 }
             }
@@ -152,27 +108,13 @@ pipeline {
                 withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
                     sh '''
                         set -e
-                    cd gourmet-flow
-
                         for REPO in \
-                            "$ECR_API_GATEWAY" \
-                            "$ECR_AUTH_SERVICE" \
-                            "$ECR_USER_SERVICE" \
-                            "$ECR_RESTAURANT_SERVICE" \
-                            "$ECR_MENU_SERVICE" \
-                            "$ECR_CART_SERVICE" \
-                            "$ECR_ORDER_SERVICE" \
-                            "$ECR_PAYMENT_SERVICE" \
-                            "$ECR_DELIVERY_SERVICE" \
+                            "$ECR_API_GATEWAY" "$ECR_AUTH_SERVICE" "$ECR_USER_SERVICE" \
+                            "$ECR_RESTAURANT_SERVICE" "$ECR_MENU_SERVICE" "$ECR_CART_SERVICE" \
+                            "$ECR_ORDER_SERVICE" "$ECR_PAYMENT_SERVICE" "$ECR_DELIVERY_SERVICE" \
                             "$ECR_FRONTEND"; do
-
-                            aws ecr describe-repositories \
-                                --repository-names "$REPO" \
-                                --region "$AWS_REGION" >/dev/null 2>&1 || \
-                            aws ecr create-repository \
-                                --repository-name "$REPO" \
-                                --image-scanning-configuration scanOnPush=true \
-                                --region "$AWS_REGION"
+                            aws ecr describe-repositories --repository-names "$REPO" --region "$AWS_REGION" >/dev/null 2>&1 ||
+                            aws ecr create-repository --repository-name "$REPO" --image-scanning-configuration scanOnPush=true --region "$AWS_REGION"
                         done
                     '''
                 }
@@ -180,132 +122,58 @@ pipeline {
         }
 
         stage('Install Dependencies') {
-            parallel {
-                stage('Backend Dependencies') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
-
-                            if [ -f package-lock.json ]; then
-                                npm ci
-                            else
-                                npm install
-                            fi
-                        '''
-                    }
-                }
-            }
-        }
-
-        stage('ESLint Scan') {
             steps {
-                script {
-                    def exitCode = 0
-
+                dir('gourmet-flow') {
                     sh '''
-                        set +e
-
-                        echo "--- Running ESLint across the codebase ---"
-
-                        if npm run | grep -q "lint"; then
-                            npm run lint
-                            EXIT_CODE=$?
-                        elif [ -x node_modules/.bin/eslint ]; then
-                            npx --no-install eslint . \\
-                                --ext .js,.jsx,.ts,.tsx \\
-                                --ignore-pattern node_modules \\
-                                --ignore-pattern dist
-                            EXIT_CODE=$?
-                        else
-                            echo "ESLint not configured. Skipping."
-                            EXIT_CODE=0
-                        fi
-
-                        if [ $EXIT_CODE -ne 0 ]; then
-                            echo "ESLint violations detected. Attempting auto-fix..."
-
-                            if npm run | grep -q "lint"; then
-                                npm run lint -- --fix || true
-                            elif [ -x node_modules/.bin/eslint ]; then
-                                npx --no-install eslint . \\
-                                    --ext .js,.jsx,.ts,.tsx \\
-                                    --ignore-pattern node_modules \\
-                                    --ignore-pattern dist \\
-                                    --fix || true
-                            fi
-
-                            FIXED=$(git diff --stat 2>/dev/null || true)
-
-                            if [ -n "$FIXED" ]; then
-                                echo "Auto-fix applied to:"
-                                echo "$FIXED"
-                            else
-                                echo "No files were modified by auto-fix (manual review needed)."
-                            fi
-                        else
-                            echo "ESLint completed — no violations found."
-                        fi
-
-                        exit $EXIT_CODE
+                        set -e
+                        if [ -f package-lock.json ]; then npm ci; else npm install; fi
                     '''
-                }
-            }
-
-            post {
-                success {
-                    echo "ESLint completed — no violations found."
-                }
-                failure {
-                    script {
-                        echo "ESLint violations detected. Attempting to commit auto-fixes..."
-
-                        def hasChanges = sh(
-                            script: 'git diff --quiet || echo "dirty"',
-                            returnStdout: true
-                        ).trim()
-
-                        if (hasChanges == "dirty") {
-                            sh '''
-                                BRANCH=$(git rev-parse --abbrev-ref HEAD)
-
-                                git config user.name  'jenkins'
-                                git config user.email 'jenkins@${APP_NAME}.com'
-                                git add -A
-                                git commit -m 'chore: auto-fix eslint violations [skip ci]' || true
-                                git push origin HEAD:"$BRANCH" 2>/dev/null || \
-                                    echo "Warning: could not push auto-fix commit (check branch permissions)"
-                            '''
-                            echo "Auto-fix committed and pushed."
-                        } else {
-                            echo "Unfixable ESLint violations remain — manual review required."
-                        }
-                    }
                 }
             }
         }
 
         stage('TypeScript Check') {
-            steps {
-                sh '''
-                    set -e
-                    cd gourmet-flow
+            parallel {
+                stage('Backend TypeScript') {
+                    steps {
+                        dir('gourmet-flow') {
+                            sh '''
+                                set -e
+                                for dir in apps/api-gateway apps/auth-service apps/user-service apps/restaurant-service apps/menu-service apps/cart-service apps/order-service apps/payment-service apps/delivery-service; do
+                                    if [ -d "$dir" ] && [ -f "$dir/package.json" ]; then
+                                        echo "--- TypeScript checking $dir ---"
+                                        (cd "$dir" && {
+                                            if npm run 2>/dev/null | grep -q "typecheck"; then
+                                                npm run typecheck
+                                            elif [ -x node_modules/.bin/tsc ]; then
+                                                npx --no-install tsc --noEmit
+                                            else
+                                                echo "TypeScript not configured. Skipping."
+                                            fi
+                                        })
+                                    fi
+                                done
+                            '''
+                        }
+                    }
+                }
 
-                    for dir in apps/api-gateway apps/auth-service apps/user-service apps/restaurant-service apps/menu-service apps/cart-service apps/order-service apps/payment-service apps/delivery-service; do
-                        if [ -d "$dir" ] && [ -f "$dir/package.json" ]; then
-                            echo "--- Checking $dir ---"
-                            (cd "$dir" && {
-                                if npm run | grep -q "typecheck"; then
+                stage('Frontend TypeScript') {
+                    steps {
+                        dir('gourmet-flow/apps/frontend') {
+                            sh '''
+                                set -e
+                                if npm run 2>/dev/null | grep -q "typecheck"; then
                                     npm run typecheck
                                 elif [ -x node_modules/.bin/tsc ]; then
-                                    npx --no-install tsc --noEmit
+                                    npx --no-install tsc -b --noEmit
                                 else
                                     echo "TypeScript not configured. Skipping."
                                 fi
-                            })
-                        fi
-                    done
-                '''
+                            '''
+                        }
+                    }
+                }
             }
         }
 
@@ -313,33 +181,32 @@ pipeline {
             parallel {
                 stage('Backend Tests') {
                     steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
-
-                            for dir in apps/api-gateway apps/auth-service apps/user-service apps/restaurant-service apps/menu-service apps/cart-service apps/order-service apps/payment-service apps/delivery-service; do
-                                if [ -d "$dir" ] && [ -f "$dir/package.json" ]; then
-                                    echo "--- Testing $dir ---"
-                                    (cd "$dir" && {
-                                        if npm run | grep -q "test"; then
-                                            npm test
-                                        else
-                                            echo "No test script configured"
-                                        fi
-                                    })
-                                fi
-                            done
-                        '''
+                        dir('gourmet-flow') {
+                            sh '''
+                                set -e
+                                for dir in apps/api-gateway apps/auth-service apps/user-service apps/restaurant-service apps/menu-service apps/cart-service apps/order-service apps/payment-service apps/delivery-service; do
+                                    if [ -d "$dir" ] && [ -f "$dir/package.json" ]; then
+                                        echo "--- Testing $dir ---"
+                                        (cd "$dir" && {
+                                            if npm run 2>/dev/null | grep -q "test"; then
+                                                npm test
+                                            else
+                                                echo "No test script configured"
+                                            fi
+                                        })
+                                    fi
+                                done
+                            '''
+                        }
                     }
                 }
 
                 stage('Frontend Tests') {
                     steps {
-                        dir('apps/frontend') {
+                        dir('gourmet-flow/apps/frontend') {
                             sh '''
                                 set -e
-
-                                if npm run | grep -q "test"; then
+                                if npm run 2>/dev/null | grep -q "test"; then
                                     npm test
                                 else
                                     echo "No frontend test script configured"
@@ -352,10 +219,8 @@ pipeline {
         }
 
         /*
-         * Run SonarQube scans sequentially.
-         *
-         * Running them in parallel can cause Jenkins to associate
-         * waitForQualityGate() with the wrong SonarQube task.
+         * SonarQube scans run sequentially to avoid
+         * waitForQualityGate() associating with the wrong task.
          */
         stage('SonarQube Backend Analysis') {
             steps {
@@ -364,13 +229,11 @@ pipeline {
                         name: env.SONAR_TOOL,
                         type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                     )
-
                     withSonarQubeEnv(env.SONAR_SERVER) {
                         sh """
                             set -e
-                    cd gourmet-flow
 
-                            echo "SonarScanner location: ${scannerHome}"
+                            echo "SonarScanner: ${scannerHome}"
 
                             "${scannerHome}/bin/sonar-scanner" \
                                 -Dsonar.projectKey=gourmet-flow-backend \
@@ -399,13 +262,11 @@ pipeline {
                         name: env.SONAR_TOOL,
                         type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                     )
-
                     withSonarQubeEnv(env.SONAR_SERVER) {
                         sh """
                             set -e
-                    cd gourmet-flow
 
-                            echo "SonarScanner location: ${scannerHome}"
+                            echo "SonarScanner: ${scannerHome}"
 
                             "${scannerHome}/bin/sonar-scanner" \
                                 -Dsonar.projectKey=gourmet-flow-frontend \
@@ -429,28 +290,20 @@ pipeline {
 
         stage('Trivy File System Scan') {
             steps {
-                sh '''
-                    set +e
-
-                    trivy fs \
-                        --format table \
-                        --severity HIGH,CRITICAL \
-                        --output trivy-fs.txt \
-                        .
-
-                    TRIVY_EXIT_CODE=$?
-
-                    echo "Trivy file-system scan exit code: $TRIVY_EXIT_CODE"
-
-                    # Do not fail the pipeline during the initial setup.
-                    exit 0
-                '''
+                dir('gourmet-flow') {
+                    sh '''
+                        set +e
+                        trivy fs --format table --severity HIGH,CRITICAL --output trivy-fs.txt .
+                        echo "Trivy exit code: $?"
+                        exit 0
+                    '''
+                }
             }
 
             post {
                 always {
                     archiveArtifacts(
-                        artifacts: 'trivy-fs.txt',
+                        artifacts: 'gourmet-flow/trivy-fs.txt',
                         allowEmptyArchive: true
                     )
                 }
@@ -462,601 +315,152 @@ pipeline {
                 withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
                     sh '''
                         set -e
-                    cd gourmet-flow
-
                         ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-
-                        aws ecr get-login-password \
-                            --region "$AWS_REGION" |
-                        docker login \
-                            --username AWS \
-                            --password-stdin "$ECR_REGISTRY"
+                        aws ecr get-login-password --region "$AWS_REGION" |
+                        docker login --username AWS --password-stdin "$ECR_REGISTRY"
                     '''
                 }
             }
         }
 
-        stage('Build Microservice Images') {
-            parallel {
-                stage('Build API Gateway') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
+        stage('Build API Gateway') {
+            steps { buildServiceImage('apps/api-gateway', "${ECR_API_GATEWAY}") }
+        }
 
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_API_GATEWAY}"
+        stage('Build Auth Service') {
+            steps { buildServiceImage('apps/auth-service', "${ECR_AUTH_SERVICE}") }
+        }
 
-                            docker build \
-                                --tag "${IMAGE}:${IMAGE_TAG}" \
-                                --tag "${IMAGE}:latest" \
-                                ./apps/api-gateway
-                        '''
-                    }
-                }
+        stage('Build User Service') {
+            steps { buildServiceImage('apps/user-service', "${ECR_USER_SERVICE}") }
+        }
 
-                stage('Build Auth Service') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
+        stage('Build Restaurant Service') {
+            steps { buildServiceImage('apps/restaurant-service', "${ECR_RESTAURANT_SERVICE}") }
+        }
 
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_AUTH_SERVICE}"
+        stage('Build Menu Service') {
+            steps { buildServiceImage('apps/menu-service', "${ECR_MENU_SERVICE}") }
+        }
 
-                            docker build \
-                                --tag "${IMAGE}:${IMAGE_TAG}" \
-                                --tag "${IMAGE}:latest" \
-                                ./apps/auth-service
-                        '''
-                    }
-                }
+        stage('Build Cart Service') {
+            steps { buildServiceImage('apps/cart-service', "${ECR_CART_SERVICE}") }
+        }
 
-                stage('Build User Service') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
+        stage('Build Order Service') {
+            steps { buildServiceImage('apps/order-service', "${ECR_ORDER_SERVICE}") }
+        }
 
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_USER_SERVICE}"
+        stage('Build Payment Service') {
+            steps { buildServiceImage('apps/payment-service', "${ECR_PAYMENT_SERVICE}") }
+        }
 
-                            docker build \
-                                --tag "${IMAGE}:${IMAGE_TAG}" \
-                                --tag "${IMAGE}:latest" \
-                                ./apps/user-service
-                        '''
-                    }
-                }
+        stage('Build Delivery Service') {
+            steps { buildServiceImage('apps/delivery-service', "${ECR_DELIVERY_SERVICE}") }
+        }
 
-                stage('Build Restaurant Service') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_RESTAURANT_SERVICE}"
-
-                            docker build \
-                                --tag "${IMAGE}:${IMAGE_TAG}" \
-                                --tag "${IMAGE}:latest" \
-                                ./apps/restaurant-service
-                        '''
-                    }
-                }
-
-                stage('Build Menu Service') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_MENU_SERVICE}"
-
-                            docker build \
-                                --tag "${IMAGE}:${IMAGE_TAG}" \
-                                --tag "${IMAGE}:latest" \
-                                ./apps/menu-service
-                        '''
-                    }
-                }
-
-                stage('Build Cart Service') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_CART_SERVICE}"
-
-                            docker build \
-                                --tag "${IMAGE}:${IMAGE_TAG}" \
-                                --tag "${IMAGE}:latest" \
-                                ./apps/cart-service
-                        '''
-                    }
-                }
-
-                stage('Build Order Service') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_ORDER_SERVICE}"
-
-                            docker build \
-                                --tag "${IMAGE}:${IMAGE_TAG}" \
-                                --tag "${IMAGE}:latest" \
-                                ./apps/order-service
-                        '''
-                    }
-                }
-
-                stage('Build Payment Service') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_PAYMENT_SERVICE}"
-
-                            docker build \
-                                --tag "${IMAGE}:${IMAGE_TAG}" \
-                                --tag "${IMAGE}:latest" \
-                                ./apps/payment-service
-                        '''
-                    }
-                }
-
-                stage('Build Delivery Service') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_DELIVERY_SERVICE}"
-
-                            docker build \
-                                --tag "${IMAGE}:${IMAGE_TAG}" \
-                                --tag "${IMAGE}:latest" \
-                                ./apps/delivery-service
-                        '''
-                    }
-                }
-
-                stage('Build Frontend') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND}"
-
-                            docker build \
-                                --build-arg VITE_API_GATEWAY_URL=/api \
-                                --tag "${IMAGE}:${IMAGE_TAG}" \
-                                --tag "${IMAGE}:latest" \
-                                ./apps/frontend
-                        '''
-                    }
-                }
+        stage('Build Frontend') {
+            steps {
+                sh '''
+                    set -e
+                    IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND}"
+                    docker build \
+                        --build-arg VITE_API_GATEWAY_URL=/api \
+                        --tag "${IMAGE}:${IMAGE_TAG}" \
+                        --tag "${IMAGE}:latest" \
+                        ./gourmet-flow/apps/frontend
+                '''
             }
         }
 
-        stage('Trivy Backend Image Scan') {
-            parallel {
-                stage('Scan API Gateway') {
-                    steps {
-                        sh '''
-                            set +e
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_API_GATEWAY}:${IMAGE_TAG}"
-
-                            trivy image \
-                                --format table \
-                                --severity HIGH,CRITICAL \
-                                --output trivy-api-gateway.txt \
-                                "$IMAGE"
-
-                            exit 0
-                        '''
-                    }
-
-                    post {
-                        always {
-                            archiveArtifacts(
-                                artifacts: 'trivy-api-gateway.txt',
-                                allowEmptyArchive: true
-                            )
-                        }
-                    }
-                }
-
-                stage('Scan Auth Service') {
-                    steps {
-                        sh '''
-                            set +e
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_AUTH_SERVICE}:${IMAGE_TAG}"
-
-                            trivy image \
-                                --format table \
-                                --severity HIGH,CRITICAL \
-                                --output trivy-auth-service.txt \
-                                "$IMAGE"
-
-                            exit 0
-                        '''
-                    }
-
-                    post {
-                        always {
-                            archiveArtifacts(
-                                artifacts: 'trivy-auth-service.txt',
-                                allowEmptyArchive: true
-                            )
-                        }
-                    }
-                }
-
-                stage('Scan User Service') {
-                    steps {
-                        sh '''
-                            set +e
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_USER_SERVICE}:${IMAGE_TAG}"
-
-                            trivy image \
-                                --format table \
-                                --severity HIGH,CRITICAL \
-                                --output trivy-user-service.txt \
-                                "$IMAGE"
-
-                            exit 0
-                        '''
-                    }
-
-                    post {
-                        always {
-                            archiveArtifacts(
-                                artifacts: 'trivy-user-service.txt',
-                                allowEmptyArchive: true
-                            )
-                        }
-                    }
-                }
-
-                stage('Scan Restaurant Service') {
-                    steps {
-                        sh '''
-                            set +e
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_RESTAURANT_SERVICE}:${IMAGE_TAG}"
-
-                            trivy image \
-                                --format table \
-                                --severity HIGH,CRITICAL \
-                                --output trivy-restaurant-service.txt \
-                                "$IMAGE"
-
-                            exit 0
-                        '''
-                    }
-
-                    post {
-                        always {
-                            archiveArtifacts(
-                                artifacts: 'trivy-restaurant-service.txt',
-                                allowEmptyArchive: true
-                            )
-                        }
-                    }
-                }
-
-                stage('Scan Menu Service') {
-                    steps {
-                        sh '''
-                            set +e
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_MENU_SERVICE}:${IMAGE_TAG}"
-
-                            trivy image \
-                                --format table \
-                                --severity HIGH,CRITICAL \
-                                --output trivy-menu-service.txt \
-                                "$IMAGE"
-
-                            exit 0
-                        '''
-                    }
-
-                    post {
-                        always {
-                            archiveArtifacts(
-                                artifacts: 'trivy-menu-service.txt',
-                                allowEmptyArchive: true
-                            )
-                        }
-                    }
-                }
-
-                stage('Scan Cart Service') {
-                    steps {
-                        sh '''
-                            set +e
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_CART_SERVICE}:${IMAGE_TAG}"
-
-                            trivy image \
-                                --format table \
-                                --severity HIGH,CRITICAL \
-                                --output trivy-cart-service.txt \
-                                "$IMAGE"
-
-                            exit 0
-                        '''
-                    }
-
-                    post {
-                        always {
-                            archiveArtifacts(
-                                artifacts: 'trivy-cart-service.txt',
-                                allowEmptyArchive: true
-                            )
-                        }
-                    }
-                }
-
-                stage('Scan Order Service') {
-                    steps {
-                        sh '''
-                            set +e
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_ORDER_SERVICE}:${IMAGE_TAG}"
-
-                            trivy image \
-                                --format table \
-                                --severity HIGH,CRITICAL \
-                                --output trivy-order-service.txt \
-                                "$IMAGE"
-
-                            exit 0
-                        '''
-                    }
-
-                    post {
-                        always {
-                            archiveArtifacts(
-                                artifacts: 'trivy-order-service.txt',
-                                allowEmptyArchive: true
-                            )
-                        }
-                    }
-                }
-
-                stage('Scan Payment Service') {
-                    steps {
-                        sh '''
-                            set +e
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_PAYMENT_SERVICE}:${IMAGE_TAG}"
-
-                            trivy image \
-                                --format table \
-                                --severity HIGH,CRITICAL \
-                                --output trivy-payment-service.txt \
-                                "$IMAGE"
-
-                            exit 0
-                        '''
-                    }
-
-                    post {
-                        always {
-                            archiveArtifacts(
-                                artifacts: 'trivy-payment-service.txt',
-                                allowEmptyArchive: true
-                            )
-                        }
-                    }
-                }
-
-                stage('Scan Delivery Service') {
-                    steps {
-                        sh '''
-                            set +e
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_DELIVERY_SERVICE}:${IMAGE_TAG}"
-
-                            trivy image \
-                                --format table \
-                                --severity HIGH,CRITICAL \
-                                --output trivy-delivery-service.txt \
-                                "$IMAGE"
-
-                            exit 0
-                        '''
-                    }
-
-                    post {
-                        always {
-                            archiveArtifacts(
-                                artifacts: 'trivy-delivery-service.txt',
-                                allowEmptyArchive: true
-                            )
-                        }
-                    }
-                }
-
-                stage('Scan Frontend') {
-                    steps {
-                        sh '''
-                            set +e
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND}:${IMAGE_TAG}"
-
-                            trivy image \
-                                --format table \
-                                --severity HIGH,CRITICAL \
-                                --output trivy-frontend.txt \
-                                "$IMAGE"
-
-                            exit 0
-                        '''
-                    }
-
-                    post {
-                        always {
-                            archiveArtifacts(
-                                artifacts: 'trivy-frontend.txt',
-                                allowEmptyArchive: true
-                            )
-                        }
-                    }
-                }
-            }
+        stage('Trivy Scan API Gateway') {
+            steps { scanTrivy("${ECR_API_GATEWAY}", 'trivy-api-gateway.txt') }
+            post { always { archiveArtifacts(artifacts: 'trivy-api-gateway.txt', allowEmptyArchive: true) } }
         }
 
-        stage('Push Microservice Images') {
-            parallel {
-                stage('Push API Gateway') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
+        stage('Trivy Scan Auth Service') {
+            steps { scanTrivy("${ECR_AUTH_SERVICE}", 'trivy-auth-service.txt') }
+            post { always { archiveArtifacts(artifacts: 'trivy-auth-service.txt', allowEmptyArchive: true) } }
+        }
 
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_API_GATEWAY}"
+        stage('Trivy Scan User Service') {
+            steps { scanTrivy("${ECR_USER_SERVICE}", 'trivy-user-service.txt') }
+            post { always { archiveArtifacts(artifacts: 'trivy-user-service.txt', allowEmptyArchive: true) } }
+        }
 
-                            docker push "${IMAGE}:${IMAGE_TAG}"
-                            docker push "${IMAGE}:latest"
-                        '''
-                    }
-                }
+        stage('Trivy Scan Restaurant Service') {
+            steps { scanTrivy("${ECR_RESTAURANT_SERVICE}", 'trivy-restaurant-service.txt') }
+            post { always { archiveArtifacts(artifacts: 'trivy-restaurant-service.txt', allowEmptyArchive: true) } }
+        }
 
-                stage('Push Auth Service') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
+        stage('Trivy Scan Menu Service') {
+            steps { scanTrivy("${ECR_MENU_SERVICE}", 'trivy-menu-service.txt') }
+            post { always { archiveArtifacts(artifacts: 'trivy-menu-service.txt', allowEmptyArchive: true) } }
+        }
 
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_AUTH_SERVICE}"
+        stage('Trivy Scan Cart Service') {
+            steps { scanTrivy("${ECR_CART_SERVICE}", 'trivy-cart-service.txt') }
+            post { always { archiveArtifacts(artifacts: 'trivy-cart-service.txt', allowEmptyArchive: true) } }
+        }
 
-                            docker push "${IMAGE}:${IMAGE_TAG}"
-                            docker push "${IMAGE}:latest"
-                        '''
-                    }
-                }
+        stage('Trivy Scan Order Service') {
+            steps { scanTrivy("${ECR_ORDER_SERVICE}", 'trivy-order-service.txt') }
+            post { always { archiveArtifacts(artifacts: 'trivy-order-service.txt', allowEmptyArchive: true) } }
+        }
 
-                stage('Push User Service') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
+        stage('Trivy Scan Payment Service') {
+            steps { scanTrivy("${ECR_PAYMENT_SERVICE}", 'trivy-payment-service.txt') }
+            post { always { archiveArtifacts(artifacts: 'trivy-payment-service.txt', allowEmptyArchive: true) } }
+        }
 
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_USER_SERVICE}"
+        stage('Trivy Scan Delivery Service') {
+            steps { scanTrivy("${ECR_DELIVERY_SERVICE}", 'trivy-delivery-service.txt') }
+            post { always { archiveArtifacts(artifacts: 'trivy-delivery-service.txt', allowEmptyArchive: true) } }
+        }
 
-                            docker push "${IMAGE}:${IMAGE_TAG}"
-                            docker push "${IMAGE}:latest"
-                        '''
-                    }
-                }
+        stage('Trivy Scan Frontend') {
+            steps { scanTrivy("${ECR_FRONTEND}", 'trivy-frontend.txt') }
+            post { always { archiveArtifacts(artifacts: 'trivy-frontend.txt', allowEmptyArchive: true) } }
+        }
 
-                stage('Push Restaurant Service') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
+        stage('Push API Gateway') {
+            steps { pushServiceImage("${ECR_API_GATEWAY}") }
+        }
 
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_RESTAURANT_SERVICE}"
+        stage('Push Auth Service') {
+            steps { pushServiceImage("${ECR_AUTH_SERVICE}") }
+        }
 
-                            docker push "${IMAGE}:${IMAGE_TAG}"
-                            docker push "${IMAGE}:latest"
-                        '''
-                    }
-                }
+        stage('Push User Service') {
+            steps { pushServiceImage("${ECR_USER_SERVICE}") }
+        }
 
-                stage('Push Menu Service') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
+        stage('Push Restaurant Service') {
+            steps { pushServiceImage("${ECR_RESTAURANT_SERVICE}") }
+        }
 
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_MENU_SERVICE}"
+        stage('Push Menu Service') {
+            steps { pushServiceImage("${ECR_MENU_SERVICE}") }
+        }
 
-                            docker push "${IMAGE}:${IMAGE_TAG}"
-                            docker push "${IMAGE}:latest"
-                        '''
-                    }
-                }
+        stage('Push Cart Service') {
+            steps { pushServiceImage("${ECR_CART_SERVICE}") }
+        }
 
-                stage('Push Cart Service') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
+        stage('Push Order Service') {
+            steps { pushServiceImage("${ECR_ORDER_SERVICE}") }
+        }
 
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_CART_SERVICE}"
+        stage('Push Payment Service') {
+            steps { pushServiceImage("${ECR_PAYMENT_SERVICE}") }
+        }
 
-                            docker push "${IMAGE}:${IMAGE_TAG}"
-                            docker push "${IMAGE}:latest"
-                        '''
-                    }
-                }
+        stage('Push Delivery Service') {
+            steps { pushServiceImage("${ECR_DELIVERY_SERVICE}") }
+        }
 
-                stage('Push Order Service') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_ORDER_SERVICE}"
-
-                            docker push "${IMAGE}:${IMAGE_TAG}"
-                            docker push "${IMAGE}:latest"
-                        '''
-                    }
-                }
-
-                stage('Push Payment Service') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_PAYMENT_SERVICE}"
-
-                            docker push "${IMAGE}:${IMAGE_TAG}"
-                            docker push "${IMAGE}:latest"
-                        '''
-                    }
-                }
-
-                stage('Push Delivery Service') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_DELIVERY_SERVICE}"
-
-                            docker push "${IMAGE}:${IMAGE_TAG}"
-                            docker push "${IMAGE}:latest"
-                        '''
-                    }
-                }
-
-                stage('Push Frontend') {
-                    steps {
-                        sh '''
-                            set -e
-                    cd gourmet-flow
-
-                            IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND}"
-
-                            docker push "${IMAGE}:${IMAGE_TAG}"
-                            docker push "${IMAGE}:latest"
-                        '''
-                    }
-                }
-            }
+        stage('Push Frontend') {
+            steps { pushServiceImage("${ECR_FRONTEND}") }
         }
 
         stage('Configure EKS Access') {
@@ -1064,12 +468,7 @@ pipeline {
                 withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
                     sh '''
                         set -e
-                    cd gourmet-flow
-
-                        aws eks update-kubeconfig \
-                            --name "$EKS_CLUSTER" \
-                            --region "$AWS_REGION"
-
+                        aws eks update-kubeconfig --name "$EKS_CLUSTER" --region "$AWS_REGION"
                         kubectl cluster-info
                         kubectl get nodes || true
                     '''
@@ -1079,93 +478,58 @@ pipeline {
 
         stage('Render Kubernetes Manifests') {
             steps {
-                sh '''
-                    set -e
-                    cd gourmet-flow
+                dir('gourmet-flow') {
+                    sh '''
+                        set -e
 
-                    ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+                        ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
-                    rm -rf rendered-k8s
-                    mkdir -p rendered-k8s
+                        rm -rf rendered-k8s
+                        mkdir -p rendered-k8s
+                        cp infra/k8s/*.yaml rendered-k8s/
 
-                    cp infra/k8s/*.yaml rendered-k8s/
+                        # Rewrite backend service images
+                        sed -i "s|gourmet-flow/api-gateway:latest|${ECR_REGISTRY}/${ECR_API_GATEWAY}:${IMAGE_TAG}|g"       rendered-k8s/backend.yaml
+                        sed -i "s|gourmet-flow/auth-service:latest|${ECR_REGISTRY}/${ECR_AUTH_SERVICE}:${IMAGE_TAG}|g"     rendered-k8s/backend.yaml
+                        sed -i "s|gourmet-flow/user-service:latest|${ECR_REGISTRY}/${ECR_USER_SERVICE}:${IMAGE_TAG}|g"     rendered-k8s/backend.yaml
+                        sed -i "s|gourmet-flow/restaurant-service:latest|${ECR_REGISTRY}/${ECR_RESTAURANT_SERVICE}:${IMAGE_TAG}|g" rendered-k8s/backend.yaml
+                        sed -i "s|gourmet-flow/menu-service:latest|${ECR_REGISTRY}/${ECR_MENU_SERVICE}:${IMAGE_TAG}|g"     rendered-k8s/backend.yaml
+                        sed -i "s|gourmet-flow/cart-service:latest|${ECR_REGISTRY}/${ECR_CART_SERVICE}:${IMAGE_TAG}|g"     rendered-k8s/backend.yaml
+                        sed -i "s|gourmet-flow/order-service:latest|${ECR_REGISTRY}/${ECR_ORDER_SERVICE}:${IMAGE_TAG}|g"   rendered-k8s/backend.yaml
+                        sed -i "s|gourmet-flow/payment-service:latest|${ECR_REGISTRY}/${ECR_PAYMENT_SERVICE}:${IMAGE_TAG}|g" rendered-k8s/backend.yaml
+                        sed -i "s|gourmet-flow/delivery-service:latest|${ECR_REGISTRY}/${ECR_DELIVERY_SERVICE}:${IMAGE_TAG}|g" rendered-k8s/backend.yaml
 
-                    # Rewrite each microservice image in backend.yaml
-                    sed -i \
-                        "s|gourmet-flow/api-gateway:latest|${ECR_REGISTRY}/${ECR_API_GATEWAY}:${IMAGE_TAG}|g" \
-                        rendered-k8s/backend.yaml
-                    sed -i \
-                        "s|gourmet-flow/auth-service:latest|${ECR_REGISTRY}/${ECR_AUTH_SERVICE}:${IMAGE_TAG}|g" \
-                        rendered-k8s/backend.yaml
-                    sed -i \
-                        "s|gourmet-flow/user-service:latest|${ECR_REGISTRY}/${ECR_USER_SERVICE}:${IMAGE_TAG}|g" \
-                        rendered-k8s/backend.yaml
-                    sed -i \
-                        "s|gourmet-flow/restaurant-service:latest|${ECR_REGISTRY}/${ECR_RESTAURANT_SERVICE}:${IMAGE_TAG}|g" \
-                        rendered-k8s/backend.yaml
-                    sed -i \
-                        "s|gourmet-flow/menu-service:latest|${ECR_REGISTRY}/${ECR_MENU_SERVICE}:${IMAGE_TAG}|g" \
-                        rendered-k8s/backend.yaml
-                    sed -i \
-                        "s|gourmet-flow/cart-service:latest|${ECR_REGISTRY}/${ECR_CART_SERVICE}:${IMAGE_TAG}|g" \
-                        rendered-k8s/backend.yaml
-                    sed -i \
-                        "s|gourmet-flow/order-service:latest|${ECR_REGISTRY}/${ECR_ORDER_SERVICE}:${IMAGE_TAG}|g" \
-                        rendered-k8s/backend.yaml
-                    sed -i \
-                        "s|gourmet-flow/payment-service:latest|${ECR_REGISTRY}/${ECR_PAYMENT_SERVICE}:${IMAGE_TAG}|g" \
-                        rendered-k8s/backend.yaml
-                    sed -i \
-                        "s|gourmet-flow/delivery-service:latest|${ECR_REGISTRY}/${ECR_DELIVERY_SERVICE}:${IMAGE_TAG}|g" \
-                        rendered-k8s/backend.yaml
+                        # Rewrite frontend image
+                        sed -i "s|gourmet-flow/frontend:latest|${ECR_REGISTRY}/${ECR_FRONTEND}:${IMAGE_TAG}|g" rendered-k8s/frontend.yaml
 
-                    # Rewrite frontend image in frontend.yaml
-                    sed -i \
-                        "s|gourmet-flow/frontend:latest|${ECR_REGISTRY}/${ECR_FRONTEND}:${IMAGE_TAG}|g" \
-                        rendered-k8s/frontend.yaml
+                        # Normalise namespace
+                        sed -i "s|namespace: gourmet-flow|namespace: ${K8S_NAMESPACE}|g" rendered-k8s/*.yaml
 
-                    echo "Rendered backend images:"
-                    grep -n "image:" rendered-k8s/backend.yaml
-
-                    echo "Rendered frontend images:"
-                    grep -n "image:" rendered-k8s/frontend.yaml
-
-                    # Update namespace in all files
-                    sed -i \
-                        "s|namespace: gourmet-flow|namespace: ${K8S_NAMESPACE}|g" \
-                        rendered-k8s/*.yaml
-                '''
+                        echo "--- Rendered backend images ---"
+                        grep -n "image:" rendered-k8s/backend.yaml
+                        echo "--- Rendered frontend images ---"
+                        grep -n "image:" rendered-k8s/frontend.yaml
+                    '''
+                }
             }
         }
 
         stage('Deploy to EKS') {
             steps {
                 withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
-                    sh '''
-                        set -e
-                    cd gourmet-flow
+                    dir('gourmet-flow/rendered-k8s') {
+                        sh '''
+                            set -e
+                            kubectl apply -f namespace.yaml
 
-                        kubectl apply -f rendered-k8s/namespace.yaml
+                            for f in configmap.yaml secrets.yaml frontend-nginx-config.yaml ingress.yaml; do
+                                [ -f "$f" ] && kubectl apply -f "$f" || true
+                            done
 
-                        if [ -f rendered-k8s/configmap.yaml ]; then
-                            kubectl apply -f rendered-k8s/configmap.yaml
-                        fi
-
-                        if [ -f rendered-k8s/secrets.yaml ]; then
-                            kubectl apply -f rendered-k8s/secrets.yaml
-                        fi
-
-                        kubectl apply -f rendered-k8s/backend.yaml
-                        kubectl apply -f rendered-k8s/frontend.yaml
-
-                        if [ -f rendered-k8s/frontend-nginx-config.yaml ]; then
-                            kubectl apply -f rendered-k8s/frontend-nginx-config.yaml
-                        fi
-
-                        if [ -f rendered-k8s/ingress.yaml ]; then
-                            kubectl apply -f rendered-k8s/ingress.yaml
-                        fi
-                    '''
+                            kubectl apply -f backend.yaml
+                            kubectl apply -f frontend.yaml
+                        '''
+                    }
                 }
             }
         }
@@ -1176,27 +540,16 @@ pipeline {
                     timeout(time: 10, unit: 'MINUTES') {
                         sh '''
                             set -e
-                    cd gourmet-flow
-
                             for deploy in api-gateway auth-service user-service restaurant-service menu-service cart-service order-service payment-service delivery-service frontend; do
-                                kubectl rollout status \
-                                    "deployment/${deploy}" \
-                                    --namespace "$K8S_NAMESPACE" \
-                                    --timeout=600s || true
+                                kubectl rollout status "deployment/${deploy}" --namespace "$K8S_NAMESPACE" --timeout=600s || true
                             done
 
-                            echo "Pods:"
-                            kubectl get pods \
-                                --namespace "$K8S_NAMESPACE" \
-                                -o wide
-
-                            echo "Services:"
-                            kubectl get services \
-                                --namespace "$K8S_NAMESPACE"
-
-                            echo "Ingress:"
-                            kubectl get ingress \
-                                --namespace "$K8S_NAMESPACE"
+                            echo "--- Pods ---"
+                            kubectl get pods --namespace "$K8S_NAMESPACE" -o wide
+                            echo "--- Services ---"
+                            kubectl get services --namespace "$K8S_NAMESPACE"
+                            echo "--- Ingress ---"
+                            kubectl get ingress --namespace "$K8S_NAMESPACE"
                         '''
                     }
                 }
@@ -1214,31 +567,51 @@ pipeline {
 
             withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
                 sh '''
-                    kubectl get pods \
-                        --namespace "$K8S_NAMESPACE" \
-                        -o wide 2>/dev/null || true
-
-                    kubectl get events \
-                        --namespace "$K8S_NAMESPACE" \
-                        --sort-by=.metadata.creationTimestamp 2>/dev/null | \
-                        tail -50 || true
+                    kubectl get pods --namespace "$K8S_NAMESPACE" -o wide 2>/dev/null || true
+                    kubectl get events --namespace "$K8S_NAMESPACE" --sort-by=.metadata.creationTimestamp 2>/dev/null | tail -50 || true
                 '''
             }
         }
 
         always {
             archiveArtifacts(
-                artifacts: 'rendered-k8s/*.yaml',
+                artifacts: 'gourmet-flow/rendered-k8s/*.yaml',
                 allowEmptyArchive: true
             )
 
             withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
                 sh '''
-                    docker logout \
-                        "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" \
-                        2>/dev/null || true
+                    docker logout "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" 2>/dev/null || true
                 '''
             }
         }
     }
+}
+
+// ── Shared helper methods ────────────────────────────────────────────
+
+def buildServiceImage(String contextDir, String ecrRepo) {
+    sh """
+        set -e
+        IMAGE="\${AWS_ACCOUNT_ID}.dkr.ecr.\${AWS_REGION}.amazonaws.com/${ecrRepo}"
+        docker build --tag "\${IMAGE}:\${IMAGE_TAG}" --tag "\${IMAGE}:latest" ./gourmet-flow/${contextDir}
+    """
+}
+
+def scanTrivy(String ecrRepo, String outputFile) {
+    sh """
+        set +e
+        IMAGE="\${AWS_ACCOUNT_ID}.dkr.ecr.\${AWS_REGION}.amazonaws.com/${ecrRepo}:\${IMAGE_TAG}"
+        trivy image --format table --severity HIGH,CRITICAL --output ${outputFile} "\$IMAGE"
+        exit 0
+    """
+}
+
+def pushServiceImage(String ecrRepo) {
+    sh """
+        set -e
+        IMAGE="\${AWS_ACCOUNT_ID}.dkr.ecr.\${AWS_REGION}.amazonaws.com/${ecrRepo}"
+        docker push "\${IMAGE}:\${IMAGE_TAG}"
+        docker push "\${IMAGE}:latest"
+    """
 }

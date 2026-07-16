@@ -10,6 +10,7 @@ dotenv.config({ path: resolve(__dirname, '../../.env') });
 const config = {
   port: parseInt(process.env.PORT, 10) || 4000,
   nodeEnv: process.env.NODE_ENV || 'development',
+  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   jwtSecret: process.env.JWT_SECRET || 'dev-jwt-secret-change-in-production',
   authServiceUrl: process.env.AUTH_SERVICE_URL || 'http://localhost:4001',
   userServiceUrl: process.env.USER_SERVICE_URL || 'http://localhost:4002',
