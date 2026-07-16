@@ -88,6 +88,16 @@ pipeline {
             }
         }
 
+        stage('Clean Docker Cache') {
+            steps {
+                sh '''
+                    docker system prune -f --volumes || true
+                    docker image prune -f || true
+                    df -h /
+                '''
+            }
+        }
+
         stage('Initialize AWS') {
             steps {
                 withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
