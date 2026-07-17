@@ -25,6 +25,7 @@ spec:
         app.kubernetes.io/component: {{ $component }}
         app.kubernetes.io/instance: {{ $.Release.Name }}
     spec:
+      terminationGracePeriodSeconds: 30
       {{- if $svc.nginxConfigMap }}
       volumes:
         - name: nginx-config

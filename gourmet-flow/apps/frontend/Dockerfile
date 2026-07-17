@@ -1,12 +1,12 @@
 FROM node:20-alpine AS builder
 
-ARG VITE_API_GATEWAY_URL
+ARG VITE_API_GATEWAY_URL=/api
 
 WORKDIR /app
-COPY package.json ./
-RUN npm install --no-audit --no-fund
+COPY package.json package-lock.json* ./
+RUN npm ci --no-audit --no-fund
 COPY . .
-RUN VITE_API_GATEWAY_URL=${VITE_API_GATEWAY_URL} npm run build
+RUN npm run build
 
 FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
