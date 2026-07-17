@@ -39,6 +39,9 @@ app.use((req, _res, next) => {
   next();
 });
 
+app.get('/health', (req, res) => res.json({ status: 'ok', service: 'order-service' }));
+app.get('/ready', (req, res) => res.json({ status: 'ready', service: 'order-service' }));
+
 app.use('/orders', orderRoutes);
 
 app.use(errorHandler);
