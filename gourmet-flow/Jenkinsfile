@@ -1,0 +1,182 @@
+def SERVICES = [
+  'api-gateway',
+  'auth-service',
+  'user-service',
+  'restaurant-service',
+  'menu-service',
+  'cart-service',
+  'order-service',
+  'payment-service',
+  'delivery-service',
+  'frontend'
+]
+
+pipeline {
+  agent any
+
+  environment {
+    AWS_REGION     = 'ap-southeast-2'
+    AWS_ACCOUNT_ID = '919651863390'
+    K8S_NAMESPACE  = 'gourmet-flow'
+    ECR_REGISTRY   = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+    IMAGE_TAG      = "${BUILD_NUMBER}"
+    K8S_DIR        = 'gourmet-flow/infra/k8s'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Build Docker Images') {
+      parallel {
+        script {
+          SERVICES.each { service ->
+            def dir = service == 'frontend'
+              ? 'gourmet-flow/apps/frontend'
+              : "gourmet-flow/apps/${service}"
+            def ecrRepo = "grabmyfood-dev-${service}"
+
+            stage("Build: ${service}") {
+              steps {
+                sh """
+                  docker build \
+                    --tag "${ECR_REGISTRY}/${ecrRepo}:${IMAGE_TAG}" \
+                    --tag "${ECR_REGISTRY}/${ecrRepo}:latest" \
+                    "${dir}"
+                """
+              }
+            }
+          }
+        }
+      }
+    }
+
+    stage('Push Images to ECR') {
+      steps {
+        sh """
+          aws ecr get-login-password --region ${AWS_REGION} \
+            | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+        """
+        script {
+          SERVICES.each { service ->
+            def ecrRepo = "grabmyfood-dev-${service}"
+            sh "docker push ${ECR_REGISTRY}/${ecrRepo}:${IMAGE_TAG}"
+            sh "docker push ${ECR_REGISTRY}/${ecrRepo}:latest"
+          }
+        }
+      }
+    }
+
+    stage('Deploy to Kubernetes') {
+      steps {
+        sh """
+          aws eks update-kubeconfig \
+            --name GrabMyFood-production \
+            --region ${AWS_REGION}
+
+          kubectl apply -k "${K8S_DIR}"
+        """
+      }
+    }
+
+    stage('Verify Rollouts') {
+      steps {
+        sh """
+          set -u
+
+          FAILED_DEPLOYMENTS=""
+
+          for deploy in \
+            api-gateway \
+            auth-service \
+            user-service \
+            restaurant-service \
+            menu-service \
+            cart-service \
+            order-service \
+            payment-service \
+            delivery-service \
+            frontend
+          do
+            echo "========================================"
+            echo "Checking rollout: \${deploy}"
+            echo "========================================"
+
+            if ! kubectl rollout status "deployment/\${deploy}" \
+                --namespace "${K8S_NAMESPACE}" \
+                --timeout=120s
+            then
+              echo "Rollout failed: \${deploy}"
+              FAILED_DEPLOYMENTS="\${FAILED_DEPLOYMENTS} \${deploy}"
+
+              echo "--- Pods for \${deploy} ---"
+              kubectl get pods \
+                --namespace "${K8S_NAMESPACE}" \
+                -l app="\${deploy}" \
+                -o wide || true
+
+              echo "--- Current logs for \${deploy} ---"
+              kubectl logs \
+                --namespace "${K8S_NAMESPACE}" \
+                deployment/"\${deploy}" \
+                --all-containers=true \
+                --tail=100 || true
+
+              echo "--- Previous logs for \${deploy} ---"
+              POD=\$(kubectl get pods \
+                --namespace "${K8S_NAMESPACE}" \
+                -l app="\${deploy}" \
+                -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+
+              if [ -n "\$POD" ]; then
+                kubectl logs "\$POD" \
+                  --namespace "${K8S_NAMESPACE}" \
+                  --all-containers=true \
+                  --previous \
+                  --tail=100 || true
+              fi
+            fi
+          done
+
+          echo "--- Pods ---"
+          kubectl get pods \
+            --namespace "${K8S_NAMESPACE}" \
+            -o wide
+
+          echo "--- Services ---"
+          kubectl get services \
+            --namespace "${K8S_NAMESPACE}"
+
+          echo "--- Ingress ---"
+          kubectl get ingress \
+            --namespace "${K8S_NAMESPACE}"
+
+          echo "--- Recent Events ---"
+          kubectl get events \
+            --namespace "${K8S_NAMESPACE}" \
+            --sort-by='.metadata.creationTimestamp' \
+            | tail -50
+
+          if [ -n "\$FAILED_DEPLOYMENTS" ]; then
+            echo "Failed deployments:\${FAILED_DEPLOYMENTS}"
+            exit 1
+          fi
+
+          echo "All deployments successfully rolled out."
+        """
+      }
+    }
+  }
+
+  post {
+    always {
+      cleanWs()
+    }
+    failure {
+      echo 'Pipeline failed. Review the logs above for details.'
+    }
+  }
+}
