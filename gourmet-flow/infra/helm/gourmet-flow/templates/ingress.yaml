@@ -11,8 +11,12 @@ spec:
   ingressClassName: {{ .Values.ingress.className | default "nginx" }}
   rules:
     {{- range .Values.ingress.rules }}
-    - host: {{ .host }}
+    {{- if .host }}
+    - host: {{ .host | quote }}
       http:
+    {{- else }}
+    - http:
+    {{- end }}
         paths:
           {{- range .paths }}
           - path: {{ .path }}

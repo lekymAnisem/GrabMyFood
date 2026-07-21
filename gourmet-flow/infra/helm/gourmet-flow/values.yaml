@@ -1,33 +1,52 @@
-# ── Global settings ────────────────────────────────────────────────
+# GrabMyFood Helm values
+# Environment: production
+# Namespace: gourmet-flow
+
 namespace: gourmet-flow
+
 nameOverride: ""
 fullnameOverride: ""
 
-imageRegistry: ""
+imageRegistry: "919651863390.dkr.ecr.ap-southeast-2.amazonaws.com"
 
 global:
   nodeEnv: "production"
+  configMapName: "gourmet-flow-config"
+  existingSecretName: "gourmet-flow-secrets"
   jwtAccessExpiration: "15m"
   jwtRefreshExpiration: "7d"
-  configMapName: "gourmet-flow-config"
-  secretName: "gourmet-flow-secrets"
 
-# ── Secrets (store in Vault or sealed-secrets in production) ──────
+# Do not commit real Neon URLs, passwords, JWT secrets, or API credentials.
+# Create this secret outside Helm, then let Argo CD deploy workloads that read it.
+# Required keys:
+# - JWT_SECRET
+# - JWT_REFRESH_SECRET
+# - AUTH_DATABASE_URL
+# - USER_DATABASE_URL
+# - RESTAURANT_DATABASE_URL
+# - MENU_DATABASE_URL
+# - CART_DATABASE_URL
+# - ORDER_DATABASE_URL
+# - PAYMENT_DATABASE_URL
+# - DELIVERY_DATABASE_URL
 secrets:
-  jwtSecret: "change-me"
-  jwtRefreshSecret: "change-me"
-  authDatabaseUrl: "postgresql://user:pass@host:5432/auth"
-  userDatabaseUrl: "postgresql://user:pass@host:5432/user"
-  restaurantDatabaseUrl: "postgresql://user:pass@host:5432/restaurant"
-  menuDatabaseUrl: "postgresql://user:pass@host:5432/menu"
-  cartDatabaseUrl: "postgresql://user:pass@host:5432/cart"
-  orderDatabaseUrl: "postgresql://user:pass@host:5432/order"
-  paymentDatabaseUrl: "postgresql://user:pass@host:5432/payment"
-  deliveryDatabaseUrl: "postgresql://user:pass@host:5432/delivery"
+  create: false
+  existingSecretName: "gourmet-flow-secrets"
 
-# ── Services ──────────────────────────────────────────────────────
-# Each key becomes the component label.  The generic deployment.yaml
-# and service.yaml templates iterate over this map.
+config:
+  NODE_ENV: "production"
+  JWT_ACCESS_EXPIRATION: "15m"
+  JWT_REFRESH_EXPIRATION: "7d"
+  API_GATEWAY_URL: "http://api-gateway:4000"
+  AUTH_SERVICE_URL: "http://auth-service:4001"
+  USER_SERVICE_URL: "http://user-service:4002"
+  RESTAURANT_SERVICE_URL: "http://restaurant-service:4003"
+  MENU_SERVICE_URL: "http://menu-service:4004"
+  CART_SERVICE_URL: "http://cart-service:4005"
+  ORDER_SERVICE_URL: "http://order-service:4006"
+  PAYMENT_SERVICE_URL: "http://payment-service:4007"
+  DELIVERY_SERVICE_URL: "http://delivery-service:4008"
+
 services:
   apiGateway:
     enabled: true
@@ -35,20 +54,32 @@ services:
     port: 4000
     replicas: 2
     serviceType: ClusterIP
+    service:
+      type: ClusterIP
+      port: 4000
+      targetPort: 4000
     image:
-      repository: letshop-production-backend
-      tag: "api-gateway-latest"
+      repository: grabmyfood-production-api-gateway
+      tag: "initial"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4000"
     livenessProbe:
+      enabled: true
       path: /health
-      initialDelaySeconds: 10
+      port: 4000
+      initialDelaySeconds: 15
       periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
     readinessProbe:
+      enabled: true
       path: /ready
-      initialDelaySeconds: 5
+      port: 4000
+      initialDelaySeconds: 10
       periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
     resources:
       requests:
         cpu: "100m"
@@ -63,20 +94,32 @@ services:
     port: 4001
     replicas: 2
     serviceType: ClusterIP
+    service:
+      type: ClusterIP
+      port: 4001
+      targetPort: 4001
     image:
-      repository: letshop-production-backend
-      tag: "auth-service-latest"
+      repository: grabmyfood-production-auth-service
+      tag: "initial"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4001"
     livenessProbe:
+      enabled: true
       path: /health
-      initialDelaySeconds: 10
+      port: 4001
+      initialDelaySeconds: 15
       periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
     readinessProbe:
+      enabled: true
       path: /ready
-      initialDelaySeconds: 5
+      port: 4001
+      initialDelaySeconds: 10
       periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
     resources:
       requests:
         cpu: "100m"
@@ -91,20 +134,32 @@ services:
     port: 4002
     replicas: 2
     serviceType: ClusterIP
+    service:
+      type: ClusterIP
+      port: 4002
+      targetPort: 4002
     image:
-      repository: letshop-production-backend
-      tag: "user-service-latest"
+      repository: grabmyfood-production-user-service
+      tag: "initial"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4002"
     livenessProbe:
+      enabled: true
       path: /health
-      initialDelaySeconds: 10
+      port: 4002
+      initialDelaySeconds: 15
       periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
     readinessProbe:
+      enabled: true
       path: /ready
-      initialDelaySeconds: 5
+      port: 4002
+      initialDelaySeconds: 10
       periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
     resources:
       requests:
         cpu: "100m"
@@ -119,20 +174,32 @@ services:
     port: 4003
     replicas: 2
     serviceType: ClusterIP
+    service:
+      type: ClusterIP
+      port: 4003
+      targetPort: 4003
     image:
-      repository: letshop-production-backend
-      tag: "restaurant-service-latest"
+      repository: grabmyfood-production-restaurant-service
+      tag: "initial"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4003"
     livenessProbe:
+      enabled: true
       path: /health
-      initialDelaySeconds: 10
+      port: 4003
+      initialDelaySeconds: 15
       periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
     readinessProbe:
+      enabled: true
       path: /ready
-      initialDelaySeconds: 5
+      port: 4003
+      initialDelaySeconds: 10
       periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
     resources:
       requests:
         cpu: "100m"
@@ -147,20 +214,32 @@ services:
     port: 4004
     replicas: 2
     serviceType: ClusterIP
+    service:
+      type: ClusterIP
+      port: 4004
+      targetPort: 4004
     image:
-      repository: letshop-production-backend
-      tag: "menu-service-latest"
+      repository: grabmyfood-production-menu-service
+      tag: "initial"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4004"
     livenessProbe:
+      enabled: true
       path: /health
-      initialDelaySeconds: 10
+      port: 4004
+      initialDelaySeconds: 15
       periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
     readinessProbe:
+      enabled: true
       path: /ready
-      initialDelaySeconds: 5
+      port: 4004
+      initialDelaySeconds: 10
       periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
     resources:
       requests:
         cpu: "100m"
@@ -175,20 +254,32 @@ services:
     port: 4005
     replicas: 2
     serviceType: ClusterIP
+    service:
+      type: ClusterIP
+      port: 4005
+      targetPort: 4005
     image:
-      repository: letshop-production-backend
-      tag: "cart-service-latest"
+      repository: grabmyfood-production-cart-service
+      tag: "initial"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4005"
     livenessProbe:
+      enabled: true
       path: /health
-      initialDelaySeconds: 10
+      port: 4005
+      initialDelaySeconds: 15
       periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
     readinessProbe:
+      enabled: true
       path: /ready
-      initialDelaySeconds: 5
+      port: 4005
+      initialDelaySeconds: 10
       periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
     resources:
       requests:
         cpu: "100m"
@@ -203,20 +294,32 @@ services:
     port: 4006
     replicas: 2
     serviceType: ClusterIP
+    service:
+      type: ClusterIP
+      port: 4006
+      targetPort: 4006
     image:
-      repository: letshop-production-backend
-      tag: "order-service-latest"
+      repository: grabmyfood-production-order-service
+      tag: "initial"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4006"
     livenessProbe:
+      enabled: true
       path: /health
-      initialDelaySeconds: 10
+      port: 4006
+      initialDelaySeconds: 15
       periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
     readinessProbe:
+      enabled: true
       path: /ready
-      initialDelaySeconds: 5
+      port: 4006
+      initialDelaySeconds: 10
       periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
     resources:
       requests:
         cpu: "100m"
@@ -231,20 +334,32 @@ services:
     port: 4007
     replicas: 2
     serviceType: ClusterIP
+    service:
+      type: ClusterIP
+      port: 4007
+      targetPort: 4007
     image:
-      repository: letshop-production-backend
-      tag: "payment-service-latest"
+      repository: grabmyfood-production-payment-service
+      tag: "initial"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4007"
     livenessProbe:
+      enabled: true
       path: /health
-      initialDelaySeconds: 10
+      port: 4007
+      initialDelaySeconds: 15
       periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
     readinessProbe:
+      enabled: true
       path: /ready
-      initialDelaySeconds: 5
+      port: 4007
+      initialDelaySeconds: 10
       periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
     resources:
       requests:
         cpu: "100m"
@@ -259,20 +374,32 @@ services:
     port: 4008
     replicas: 2
     serviceType: ClusterIP
+    service:
+      type: ClusterIP
+      port: 4008
+      targetPort: 4008
     image:
-      repository: letshop-production-backend
-      tag: "delivery-service-latest"
+      repository: grabmyfood-production-delivery-service
+      tag: "initial"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4008"
     livenessProbe:
+      enabled: true
       path: /health
-      initialDelaySeconds: 10
+      port: 4008
+      initialDelaySeconds: 15
       periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
     readinessProbe:
+      enabled: true
       path: /ready
-      initialDelaySeconds: 5
+      port: 4008
+      initialDelaySeconds: 10
       periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
     resources:
       requests:
         cpu: "100m"
@@ -287,20 +414,31 @@ services:
     port: 80
     replicas: 2
     serviceType: ClusterIP
+    service:
+      type: ClusterIP
+      port: 80
+      targetPort: 80
     image:
-      repository: letshop-production-frontend
-      tag: "frontend-latest"
+      repository: grabmyfood-production-frontend
+      tag: "initial"
       pullPolicy: IfNotPresent
-    envVars:
-      VITE_API_GATEWAY_URL: "/api"
+    envVars: {}
     livenessProbe:
+      enabled: true
       path: /
-      initialDelaySeconds: 10
+      port: 80
+      initialDelaySeconds: 15
       periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
     readinessProbe:
+      enabled: true
       path: /
-      initialDelaySeconds: 5
+      port: 80
+      initialDelaySeconds: 10
       periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
     resources:
       requests:
         cpu: "100m"
@@ -308,22 +446,55 @@ services:
       limits:
         cpu: "200m"
         memory: "128Mi"
-    # Frontend-specific flags consumed by templates
     nginxConfigMap: "frontend-nginx-config"
     skipEnvFrom: true
 
-# ── Ingress ──────────────────────────────────────────────────────
 ingress:
   enabled: true
   className: nginx
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
   rules:
-    - host: gourmet-flow.local
+    - host: ""
       paths:
         - path: /
           pathType: Prefix
           serviceName: frontend
           servicePort: 80
+        - path: /api
+          pathType: Prefix
+          serviceName: api-gateway
+          servicePort: 4000
   tls: []
+
+serviceAccount:
+  create: true
+  name: gourmet-flow
+  annotations: {}
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  fsGroup: 1000
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80

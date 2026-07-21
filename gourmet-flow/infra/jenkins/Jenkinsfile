@@ -1,0 +1,61 @@
+stage('Update Helm Image Tags') {
+    steps {
+        dir('gourmet-flow') {
+            withCredentials([
+                usernamePassword(
+                    credentialsId: 'github-token',
+                    usernameVariable: 'GIT_USERNAME',
+                    passwordVariable: 'GIT_TOKEN'
+                )
+            ]) {
+                sh '''
+                    set -e
+
+                    VALUES_FILE="gourmet-flow/infra/helm/gourmet-flow/values.yaml"
+
+                    test -f "$VALUES_FILE" || {
+                        echo "ERROR: $VALUES_FILE not found"
+                        exit 1
+                    }
+
+                    command -v yq >/dev/null 2>&1 || {
+                        echo "ERROR: yq is not installed on the Jenkins agent"
+                        exit 1
+                    }
+
+                    echo "Updating Helm image tags to ${IMAGE_TAG}"
+
+                    yq -i '.services.apiGateway.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+                    yq -i '.services.authService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+                    yq -i '.services.userService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+                    yq -i '.services.restaurantService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+                    yq -i '.services.menuService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+                    yq -i '.services.cartService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+                    yq -i '.services.orderService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+                    yq -i '.services.paymentService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+                    yq -i '.services.deliveryService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+                    yq -i '.services.frontend.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+
+                    echo "--- Updated image values ---"
+                    yq '.services.*.image' "$VALUES_FILE"
+
+                    git config user.name "Jenkins CI"
+                    git config user.email "jenkins@grabmyfood.local"
+
+                    git add "$VALUES_FILE"
+
+                    if git diff --cached --quiet; then
+                        echo "No Helm values changes detected."
+                        exit 0
+                    fi
+
+                    git commit -m "chore(gitops): deploy build ${BUILD_NUMBER} [skip ci]"
+
+                    git push \
+                      "https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/lekymAnisem/GrabMyFood.git" \
+                      HEAD:main
+                '''
+            }
+        }
+    }
+}

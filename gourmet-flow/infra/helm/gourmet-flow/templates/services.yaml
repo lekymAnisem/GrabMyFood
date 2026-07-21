@@ -2,6 +2,9 @@
 {{- if $svc.enabled }}
 {{- $name := $svc.name | default $key }}
 {{- $component := $key }}
+{{- $servicePort := $svc.service.port | default $svc.port }}
+{{- $targetPort := $svc.service.targetPort | default $svc.port }}
+{{- $serviceType := $svc.service.type | default $svc.serviceType | default "ClusterIP" }}
 ---
 apiVersion: v1
 kind: Service
@@ -17,10 +20,10 @@ spec:
     app.kubernetes.io/component: {{ $component }}
     app.kubernetes.io/instance: {{ $.Release.Name }}
   ports:
-    - port: {{ $svc.port }}
-      targetPort: {{ $svc.port }}
+    - port: {{ $servicePort }}
+      targetPort: {{ $targetPort }}
       protocol: TCP
       name: http
-  type: {{ $svc.serviceType | default "ClusterIP" }}
+  type: {{ $serviceType }}
 {{- end }}
 {{- end }}
