@@ -9,7 +9,7 @@ terraform {
   }
 
   backend "s3" {
-    bucket = "letshop-production-terraform-state"
+    bucket = "letshop-production-terraform-state-630243422439"
     key    = "infra/terraform.tfstate"
     region = "ap-southeast-2"
   }
@@ -43,7 +43,7 @@ locals {
 }
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "letshop-production-terraform-state"
+  bucket = "letshop-production-terraform-state-630243422439"
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state" {
