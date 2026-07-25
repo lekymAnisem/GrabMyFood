@@ -398,9 +398,9 @@ services:
     name: frontend
     port: 80
     replicas: 2
-    serviceType: ClusterIP
+    serviceType: LoadBalancer
     service:
-      type: ClusterIP
+      type: LoadBalancer
       port: 80
       targetPort: 80
     image:
