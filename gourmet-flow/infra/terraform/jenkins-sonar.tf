@@ -1,26 +1,3 @@
-data "aws_vpc" "jenkins_sonar" {
-  filter {
-    name   = "tag:Name"
-    values = ["jenkins-sonar-vpc-vpc"]
-  }
-}
-
-data "aws_security_group" "jenkins_sonar" {
-  name   = "jenkins-sonar-sg"
-  vpc_id = data.aws_vpc.jenkins_sonar.id
-}
-
-data "aws_subnets" "jenkins_sonar" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.jenkins_sonar.id]
-  }
-}
-
-data "aws_iam_user" "lekym" {
-  user_name = "Lekym"
-}
-
 resource "aws_iam_role" "jenkins" {
   name = "${var.app_name}-${var.environment}-jenkins-role"
 
@@ -46,11 +23,45 @@ resource "aws_iam_instance_profile" "jenkins" {
   role = aws_iam_role.jenkins.name
 }
 
+resource "aws_security_group" "jenkins" {
+  name        = "${local.name_prefix}-jenkins-sg"
+  description = "Security group for the Jenkins EC2 instance"
+  vpc_id      = aws_vpc.this.id
+
+  ingress {
+    description = "SSH from admin CIDRs"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = var.admin_allowed_cidr_blocks
+  }
+
+  ingress {
+    description = "Jenkins web UI from admin CIDRs"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = var.admin_allowed_cidr_blocks
+  }
+
+  egress {
+    description = "All outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${local.name_prefix}-jenkins-sg"
+  }
+}
+
 resource "aws_instance" "jenkins" {
   ami                    = var.ubuntu_ami_id
   instance_type          = var.jenkins_instance_type
-  subnet_id              = data.aws_subnets.jenkins_sonar.ids[0]
-  vpc_security_group_ids = [data.aws_security_group.jenkins_sonar.id]
+  subnet_id              = aws_subnet.public[0].id
+  vpc_security_group_ids = [aws_security_group.jenkins.id]
   key_name               = var.ssh_key_name
   iam_instance_profile   = aws_iam_instance_profile.jenkins.name
 
@@ -150,4 +161,3 @@ resource "aws_eks_access_policy_association" "jenkins" {
     aws_eks_access_entry.jenkins
   ]
 }
-
