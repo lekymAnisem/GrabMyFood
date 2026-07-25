@@ -31,7 +31,7 @@ ecr_scan_on_push         = true
 ecr_force_delete         = true
 
 eks_enabled                    = true
-eks_version                    = "1.30"
+eks_version                    = "1.36"
 eks_public_access_cidr_blocks  = ["0.0.0.0/0"]
 eks_node_instance_types        = ["c7i-flex.large"]
 eks_node_capacity_type         = "ON_DEMAND"

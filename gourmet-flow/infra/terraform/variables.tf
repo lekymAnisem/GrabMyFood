@@ -134,7 +134,7 @@ variable "eks_enabled" {
 variable "eks_version" {
   description = "EKS Kubernetes version"
   type        = string
-  default     = "1.30"
+  default     = "1.36"
 }
 
 variable "eks_public_access_cidr_blocks" {
