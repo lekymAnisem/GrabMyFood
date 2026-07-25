@@ -1,0 +1,34 @@
+{
+  "receiver": "ai-kubernetes-agent",
+  "status": "firing",
+  "groupLabels": {
+    "alertname": "KubernetesPodCrashLooping",
+    "namespace": "gourmet-flow"
+  },
+  "commonLabels": {
+    "alertname": "KubernetesPodCrashLooping",
+    "namespace": "gourmet-flow",
+    "deployment": "payment-service",
+    "severity": "critical"
+  },
+  "commonAnnotations": {
+    "summary": "Pod is crash looping"
+  },
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {
+        "alertname": "KubernetesPodCrashLooping",
+        "namespace": "gourmet-flow",
+        "deployment": "payment-service",
+        "pod": "payment-service-abc123",
+        "severity": "critical"
+      },
+      "annotations": {
+        "summary": "payment-service pod is crash looping"
+      },
+      "startsAt": "2026-07-22T00:00:00Z",
+      "fingerprint": "example-crashloop"
+    }
+  ]
+}

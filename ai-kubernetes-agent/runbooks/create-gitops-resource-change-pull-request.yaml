@@ -1,0 +1,20 @@
+id: create-gitops-resource-change-pull-request
+description: Propose CPU, memory, HPA, or probe changes through GitOps
+risk: medium
+automaticExecutionAllowed: false
+requiresApproval: true
+parameters:
+  - repository
+  - branch
+  - service
+  - valuesPath
+action:
+  - create branch
+  - update Helm values
+  - open pull request with PromQL evidence and rollback plan
+verification:
+  - Argo CD syncs after merge
+  - incident verification queries improve
+rollback:
+  - revert pull request or open follow-up change
+timeoutSeconds: 900

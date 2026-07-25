@@ -1,0 +1,21 @@
+id: restart-deployment-with-approval
+description: Trigger a rollout restart for an approved Deployment
+risk: medium
+automaticExecutionAllowed: false
+requiresApproval: true
+parameters:
+  - namespace
+  - deployment
+preChecks:
+  - verify deployment is stateless
+  - verify minimum available replicas will remain
+  - verify no active rollout is running
+action:
+  - patch deployment pod template annotation with restart timestamp
+verification:
+  - rollout completes
+  - new Pods become Ready
+  - latency and error rate are not worse
+rollback:
+  - rollback to previous ReplicaSet with explicit approval
+timeoutSeconds: 600

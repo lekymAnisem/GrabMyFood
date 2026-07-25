@@ -1,0 +1,25 @@
+id: scale-deployment-within-policy
+description: Temporarily scale a stateless Deployment within service guardrails
+risk: medium
+automaticExecutionAllowed: false
+requiresApproval: true
+parameters:
+  - namespace
+  - deployment
+  - replicas
+preChecks:
+  - verify target replica count is within minimum and maximum replicas
+  - verify maximum automatic increase is not exceeded
+  - verify HPA status
+  - verify database connections are healthy
+  - verify nodes have available capacity
+action:
+  - patch deployment scale subresource
+verification:
+  - new Pods are Ready
+  - latency decreases
+  - error rate does not increase
+  - database connections remain below threshold
+rollback:
+  - restore previous replica count when action expires unless a GitOps change is merged
+timeoutSeconds: 900

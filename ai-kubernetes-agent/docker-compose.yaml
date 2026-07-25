@@ -1,0 +1,18 @@
+services:
+  agent:
+    build: .
+    environment:
+      PORT: 8080
+      AGENT_MODE: recommend
+      AUTOMATIC_REMEDIATION: "false"
+      CLUSTER_NAME: GrabMyFood-production
+      KUBERNETES_NAMESPACE: gourmet-flow
+      PROMETHEUS_URL: http://prometheus:9090
+      MODEL_PROVIDER: disabled
+      MODEL_NAME: local-rule-engine
+    ports:
+      - "8080:8080"
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    ports:
+      - "9090:9090"

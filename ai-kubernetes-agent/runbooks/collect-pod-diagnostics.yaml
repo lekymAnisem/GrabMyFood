@@ -1,0 +1,17 @@
+id: collect-pod-diagnostics
+description: Collect pod status, previous logs, events, image, env references, and owning Deployment
+risk: low
+automaticExecutionAllowed: true
+parameters:
+  - namespace
+  - podName
+action:
+  - read pod
+  - read previous container logs
+  - read namespace events
+  - read owning ReplicaSet and Deployment
+verification:
+  - diagnostic bundle is attached to incident
+rollback:
+  - not applicable
+timeoutSeconds: 120

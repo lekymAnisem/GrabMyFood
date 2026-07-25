@@ -1,0 +1,22 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "ai-agent.fullname" . }}
+spec:
+  groups:
+    - name: ai-agent.rules
+      rules:
+        - alert: AIAgentDown
+          expr: up{job=~".*ai-kubernetes-agent.*"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: AI Kubernetes monitoring agent target is down
+        - alert: AIAgentRunbookFailures
+          expr: increase(ai_agent_actions_failed_total[10m]) > 0
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: AI agent runbook execution failed

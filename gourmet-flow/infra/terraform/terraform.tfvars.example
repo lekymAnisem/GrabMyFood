@@ -39,7 +39,7 @@ eks_node_disk_size             = 20
 eks_node_min_size              = 1
 eks_node_desired_size          = 2
 eks_node_max_size              = 3
-eks_admin_role_arn             = ""
+eks_admin_role_arn             = "arn:aws:iam::630243422439:user/Lekym"
 
 jenkins_instance_type        = "c7i.large"
 jenkins_root_volume_size     = 20

@@ -1,0 +1,15 @@
+id: investigate-database-connections
+description: Investigate PostgreSQL connection pressure and pool exhaustion
+risk: low
+automaticExecutionAllowed: true
+parameters:
+  - database
+action:
+  - query active and idle connection utilization
+  - query slow queries and long transactions
+  - compare service replica counts with pool sizes
+verification:
+  - report whether scaling application Pods would worsen connection pressure
+rollback:
+  - not applicable
+timeoutSeconds: 180

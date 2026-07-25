@@ -1,0 +1,23 @@
+{
+  "uid": "grabmyfood-app",
+  "title": "GrabMyFood Application Performance",
+  "schemaVersion": 39,
+  "tags": ["grabmyfood", "application"],
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Requests Per Second",
+      "targets": [{ "expr": "sum by (service) (rate(http_requests_total{namespace=\"gourmet-flow\"}[5m]))" }],
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 7 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency Percentiles",
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (le, service) (rate(http_request_duration_seconds_bucket{namespace=\"gourmet-flow\"}[5m])))", "legendFormat": "p95 {{service}}" },
+        { "expr": "histogram_quantile(0.99, sum by (le, service) (rate(http_request_duration_seconds_bucket{namespace=\"gourmet-flow\"}[5m])))", "legendFormat": "p99 {{service}}" }
+      ],
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 7 }
+    }
+  ]
+}
