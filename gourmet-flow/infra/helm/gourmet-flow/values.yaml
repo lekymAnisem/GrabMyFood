@@ -5,7 +5,7 @@
 namespace: gourmet-flow
 nameOverride: ""
 fullnameOverride: ""
-imageRegistry: "919651863390.dkr.ecr.ap-southeast-2.amazonaws.com"
+imageRegistry: "630243422439.dkr.ecr.ap-southeast-2.amazonaws.com"
 global:
   nodeEnv: "production"
   configMapName: "gourmet-flow-config"
