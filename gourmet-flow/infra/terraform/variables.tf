@@ -40,6 +40,18 @@ variable "ssh_key_name" {
   default     = "letshop-key"
 }
 
+variable "ssh_public_key" {
+  description = "Public key material to create the EC2 key pair used for SSH access"
+  type        = string
+  default     = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCZudhssCHhcHCwcu9dVXM7LfG7o0e37Kvefc+KAWShZ8v78+o7oe31lA78Hw0PQnoD05meLz9yH/8jn8yLKDqnOch4MdKv8+JEzBDjlBD2TSaZagBcCWHz1mWhrdvm/jDPrAZEmSP9qNtv0rWenERaiKZxIOaIVLQsrr3/ztpAlSuE/RtDuyd5k0eBzJq0YXimf1iJFdQbnngSK7IGhXFlQamUc33nkkC3Jj7esszMNBn2dA7y/27nw8Y2MQLrHovfY5y03SzfixxDtXjpJBlXMEBw85C5y/XWlQ1yIZvfRpvRvQjmFRwDUIBLlBv27iEd4uZdMhkWMeg57Y/bmIj/"
+}
+
+variable "ssh_private_key_path" {
+  description = "Local private key path used in generated SSH helper commands"
+  type        = string
+  default     = "/Users/admin/Downloads/letshop-key.pem"
+}
+
 variable "admin_allowed_cidr_blocks" {
   description = "CIDR blocks allowed to SSH into the EC2 servers"
   type        = list(string)

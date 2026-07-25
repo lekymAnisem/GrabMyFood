@@ -28,7 +28,7 @@ resource "aws_instance" "monitoring" {
   instance_type          = var.monitoring_instance_type
   subnet_id              = aws_subnet.public[0].id
   vpc_security_group_ids = [aws_security_group.monitoring.id]
-  key_name               = var.ssh_key_name
+  key_name               = aws_key_pair.ssh.key_name
   iam_instance_profile   = aws_iam_instance_profile.monitoring.name
 
   root_block_device {

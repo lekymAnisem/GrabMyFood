@@ -61,7 +61,7 @@ output "alertmanager_url" {
 
 output "ssh_monitoring_command" {
   description = "SSH command to connect to the monitoring instance"
-  value       = "ssh -i ${var.ssh_key_name}.pem ubuntu@${aws_eip.monitoring.public_ip}"
+  value       = "ssh -i ${var.ssh_private_key_path} ubuntu@${aws_eip.monitoring.public_ip}"
 }
 
 output "configure_kubectl_command" {
@@ -86,6 +86,5 @@ output "jenkins_url" {
 
 output "ssh_jenkins_command" {
   description = "SSH command to connect to the Jenkins instance"
-  value       = "ssh -i ${var.ssh_key_name}.pem ubuntu@${aws_eip.jenkins.public_ip}"
+  value       = "ssh -i ${var.ssh_private_key_path} ubuntu@${aws_eip.jenkins.public_ip}"
 }
-

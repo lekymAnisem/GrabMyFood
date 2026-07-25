@@ -9,7 +9,9 @@ ubuntu_ami_id  = "ami-06259b63260eddc13"
 vpc_cidr            = "10.0.0.0/16"
 public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
 
-ssh_key_name              = "/Users/admin/Downloads/my-Key"
+ssh_key_name              = "letshop-key"
+ssh_public_key            = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCZudhssCHhcHCwcu9dVXM7LfG7o0e37Kvefc+KAWShZ8v78+o7oe31lA78Hw0PQnoD05meLz9yH/8jn8yLKDqnOch4MdKv8+JEzBDjlBD2TSaZagBcCWHz1mWhrdvm/jDPrAZEmSP9qNtv0rWenERaiKZxIOaIVLQsrr3/ztpAlSuE/RtDuyd5k0eBzJq0YXimf1iJFdQbnngSK7IGhXFlQamUc33nkkC3Jj7esszMNBn2dA7y/27nw8Y2MQLrHovfY5y03SzfixxDtXjpJBlXMEBw85C5y/XWlQ1yIZvfRpvRvQjmFRwDUIBLlBv27iEd4uZdMhkWMeg57Y/bmIj/"
+ssh_private_key_path      = "/Users/admin/Downloads/letshop-key.pem"
 admin_allowed_cidr_blocks = ["0.0.0.0/0"]
 
 monitoring_allowed_cidr_blocks = ["0.0.0.0/0"]

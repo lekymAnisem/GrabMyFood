@@ -62,7 +62,7 @@ resource "aws_instance" "jenkins" {
   instance_type          = var.jenkins_instance_type
   subnet_id              = aws_subnet.public[0].id
   vpc_security_group_ids = [aws_security_group.jenkins.id]
-  key_name               = var.ssh_key_name
+  key_name               = aws_key_pair.ssh.key_name
   iam_instance_profile   = aws_iam_instance_profile.jenkins.name
 
   root_block_device {
