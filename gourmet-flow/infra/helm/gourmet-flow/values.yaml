@@ -3,19 +3,15 @@
 # Namespace: gourmet-flow
 
 namespace: gourmet-flow
-
 nameOverride: ""
 fullnameOverride: ""
-
 imageRegistry: "919651863390.dkr.ecr.ap-southeast-2.amazonaws.com"
-
 global:
   nodeEnv: "production"
   configMapName: "gourmet-flow-config"
   existingSecretName: "gourmet-flow-secrets"
   jwtAccessExpiration: "15m"
   jwtRefreshExpiration: "7d"
-
 # Do not commit real Neon URLs, passwords, JWT secrets, or API credentials.
 # Create this secret outside Helm, then let Argo CD deploy workloads that read it.
 # Required keys:
@@ -32,7 +28,6 @@ global:
 secrets:
   create: false
   existingSecretName: "gourmet-flow-secrets"
-
 config:
   NODE_ENV: "production"
   JWT_ACCESS_EXPIRATION: "15m"
@@ -46,7 +41,6 @@ config:
   ORDER_SERVICE_URL: "http://order-service:4006"
   PAYMENT_SERVICE_URL: "http://payment-service:4007"
   DELIVERY_SERVICE_URL: "http://delivery-service:4008"
-
 services:
   apiGateway:
     enabled: true
@@ -60,7 +54,7 @@ services:
       targetPort: 4000
     image:
       repository: grabmyfood-production-api-gateway
-      tag: "initial"
+      tag: "5"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4000"
@@ -87,7 +81,6 @@ services:
       limits:
         cpu: "300m"
         memory: "256Mi"
-
   authService:
     enabled: true
     name: auth-service
@@ -100,7 +93,7 @@ services:
       targetPort: 4001
     image:
       repository: grabmyfood-production-auth-service
-      tag: "initial"
+      tag: "5"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4001"
@@ -127,7 +120,6 @@ services:
       limits:
         cpu: "300m"
         memory: "256Mi"
-
   userService:
     enabled: true
     name: user-service
@@ -140,7 +132,7 @@ services:
       targetPort: 4002
     image:
       repository: grabmyfood-production-user-service
-      tag: "initial"
+      tag: "5"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4002"
@@ -167,7 +159,6 @@ services:
       limits:
         cpu: "300m"
         memory: "256Mi"
-
   restaurantService:
     enabled: true
     name: restaurant-service
@@ -180,7 +171,7 @@ services:
       targetPort: 4003
     image:
       repository: grabmyfood-production-restaurant-service
-      tag: "initial"
+      tag: "5"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4003"
@@ -207,7 +198,6 @@ services:
       limits:
         cpu: "300m"
         memory: "256Mi"
-
   menuService:
     enabled: true
     name: menu-service
@@ -220,7 +210,7 @@ services:
       targetPort: 4004
     image:
       repository: grabmyfood-production-menu-service
-      tag: "initial"
+      tag: "5"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4004"
@@ -247,7 +237,6 @@ services:
       limits:
         cpu: "300m"
         memory: "256Mi"
-
   cartService:
     enabled: true
     name: cart-service
@@ -260,7 +249,7 @@ services:
       targetPort: 4005
     image:
       repository: grabmyfood-production-cart-service
-      tag: "initial"
+      tag: "5"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4005"
@@ -287,7 +276,6 @@ services:
       limits:
         cpu: "300m"
         memory: "256Mi"
-
   orderService:
     enabled: true
     name: order-service
@@ -300,7 +288,7 @@ services:
       targetPort: 4006
     image:
       repository: grabmyfood-production-order-service
-      tag: "initial"
+      tag: "5"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4006"
@@ -327,7 +315,6 @@ services:
       limits:
         cpu: "300m"
         memory: "256Mi"
-
   paymentService:
     enabled: true
     name: payment-service
@@ -340,7 +327,7 @@ services:
       targetPort: 4007
     image:
       repository: grabmyfood-production-payment-service
-      tag: "initial"
+      tag: "5"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4007"
@@ -367,7 +354,6 @@ services:
       limits:
         cpu: "300m"
         memory: "256Mi"
-
   deliveryService:
     enabled: true
     name: delivery-service
@@ -380,7 +366,7 @@ services:
       targetPort: 4008
     image:
       repository: grabmyfood-production-delivery-service
-      tag: "initial"
+      tag: "5"
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4008"
@@ -407,7 +393,6 @@ services:
       limits:
         cpu: "300m"
         memory: "256Mi"
-
   frontend:
     enabled: true
     name: frontend
@@ -420,7 +405,7 @@ services:
       targetPort: 80
     image:
       repository: grabmyfood-production-frontend
-      tag: "initial"
+      tag: "5"
       pullPolicy: IfNotPresent
     envVars: {}
     livenessProbe:
@@ -448,7 +433,6 @@ services:
         memory: "128Mi"
     nginxConfigMap: "frontend-nginx-config"
     skipEnvFrom: true
-
 ingress:
   enabled: true
   className: nginx
@@ -469,29 +453,23 @@ ingress:
           serviceName: api-gateway
           servicePort: 4000
   tls: []
-
 serviceAccount:
   create: true
   name: gourmet-flow
   annotations: {}
-
 podAnnotations: {}
-
 podSecurityContext:
   runAsNonRoot: true
   fsGroup: 1000
-
 containerSecurityContext:
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: false
   capabilities:
     drop:
       - ALL
-
 nodeSelector: {}
 tolerations: []
 affinity: {}
-
 autoscaling:
   enabled: false
   minReplicas: 2
