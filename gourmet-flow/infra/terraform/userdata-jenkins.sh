@@ -100,7 +100,7 @@ curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 apt-get install -y -qq nodejs
 
 # ── yq (YAML processor) ─────────────────────────────────────
-curl -fsSL "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64" \
+curl -fsSL "https://github.com/mikefarah/yq/releases/download/v4.44.6/yq_linux_amd64" \
   -o /usr/local/bin/yq
 chmod +x /usr/local/bin/yq
 
