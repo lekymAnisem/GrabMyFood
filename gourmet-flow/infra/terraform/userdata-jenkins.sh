@@ -8,15 +8,27 @@ apt-get update -qq
 apt-get upgrade -y -qq
 apt-get install -y -qq curl wget gnupg2 software-properties-common ufw unzip
 
-# ── Java (OpenJDK 17) ───────────────────────────────────────
-apt-get install -y -qq openjdk-17-jdk
+# ── Java (OpenJDK 21) ───────────────────────────────────────
+apt-get install -y -qq openjdk-21-jdk
 
 # ── Jenkins (LTS) ───────────────────────────────────────────
 curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key \
-  | gpg --dearmor -o /usr/share/keyrings/jenkins-keyring.gpg
-echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.gpg] https://pkg.jenkins.io/debian-stable binary/" \
+  -o /usr/share/keyrings/jenkins-keyring.asc
+echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/" \
   > /etc/apt/sources.list.d/jenkins.list
-apt-get update -qq
+set +e
+apt-get update -qq 2>&1
+UPDATE_EXIT=$?
+set -e
+if [ $UPDATE_EXIT -ne 0 ]; then
+  apt-get install -y -qq dirmngr gnupg
+  KEYS=$(apt-get update 2>&1 | grep "NO_PUBKEY" | awk '{print $NF}')
+  for key in $KEYS; do
+    gpg --keyserver keyserver.ubuntu.com --recv-keys "$key"
+    gpg --export --armor "$key" >> /usr/share/keyrings/jenkins-keyring.asc
+  done
+  apt-get update -qq
+fi
 apt-get install -y -qq jenkins
 
 systemctl daemon-reload
