@@ -1,5 +1,8 @@
 FROM node:20-alpine AS build
 
+ARG VITE_API_GATEWAY_URL=/api
+ENV VITE_API_GATEWAY_URL=$VITE_API_GATEWAY_URL
+
 WORKDIR /app
 
 COPY package*.json ./
