@@ -52,6 +52,14 @@ resource "aws_security_group" "jenkins" {
     cidr_blocks = var.admin_allowed_cidr_blocks
   }
 
+  ingress {
+    description = "AI agent webhook from admin and monitoring CIDRs"
+    from_port   = 8081
+    to_port     = 8081
+    protocol    = "tcp"
+    cidr_blocks = concat(var.admin_allowed_cidr_blocks, var.monitoring_allowed_cidr_blocks)
+  }
+
   egress {
     description = "All outbound traffic"
     from_port   = 0
