@@ -59,7 +59,7 @@ spec:
       {{- end }}
       containers:
         - name: {{ $name }}
-          image: {{ include "gourmet-flow.image" (dict "repository" $svc.image.repository "tag" $svc.image.tag "Values" $) }}
+          image: {{ include "gourmet-flow.image" (dict "repository" $svc.image.repository "tag" $svc.image.tag "root" $) }}
           imagePullPolicy: {{ $svc.image.pullPolicy | default "IfNotPresent" }}
           {{- with $.Values.containerSecurityContext }}
           securityContext:

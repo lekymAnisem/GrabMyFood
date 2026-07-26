@@ -46,6 +46,6 @@ app.kubernetes.io/instance: {{ $.Release.Name }}
 Image reference
 */}}
 {{- define "gourmet-flow.image" -}}
-{{- $reg := $.Values.imageRegistry | default "" -}}
+{{- $reg := $.root.Values.imageRegistry | default "" -}}
 {{- if $reg }}{{ $reg }}/{{ end }}{{ .repository }}:{{ .tag }}
 {{- end }}
