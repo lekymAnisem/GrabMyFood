@@ -18,6 +18,29 @@ resource "aws_iam_role_policy_attachment" "monitoring_ssm" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
+data "aws_iam_policy_document" "monitoring_eks_describe" {
+  statement {
+    sid    = "DescribeGrabMyFoodEKSCluster"
+    effect = "Allow"
+    actions = [
+      "eks:DescribeCluster"
+    ]
+    resources = [
+      "arn:aws:eks:${var.aws_region}:${data.aws_caller_identity.current.account_id}:cluster/${local.name_prefix}"
+    ]
+  }
+}
+
+resource "aws_iam_policy" "monitoring_eks_describe" {
+  name   = "GrabMyFoodEKSDescribeCluster"
+  policy = data.aws_iam_policy_document.monitoring_eks_describe.json
+}
+
+resource "aws_iam_role_policy_attachment" "monitoring_eks_describe" {
+  role       = aws_iam_role.monitoring.name
+  policy_arn = aws_iam_policy.monitoring_eks_describe.arn
+}
+
 resource "aws_iam_instance_profile" "monitoring" {
   name = "${local.name_prefix}-monitoring-profile"
   role = aws_iam_role.monitoring.name
