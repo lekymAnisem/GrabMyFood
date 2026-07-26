@@ -14,6 +14,9 @@ agent:
   awsAccountId: "919651863390"
   prometheusUrl: http://kube-prometheus-stack-prometheus.monitoring:9090
   grafanaUrl: ""
+  modelProvider: "openai-compatible"
+  modelName: "llama3-70b-8192"
+  openaiBaseUrl: "https://api.groq.com/openai/v1"
 
 secretRefs:
   existingSecretName: ai-kubernetes-agent-secrets

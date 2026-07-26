@@ -11,5 +11,6 @@ data:
   AWS_ACCOUNT_ID: {{ .Values.agent.awsAccountId | quote }}
   PROMETHEUS_URL: {{ .Values.agent.prometheusUrl | quote }}
   GRAFANA_URL: {{ .Values.agent.grafanaUrl | quote }}
-  MODEL_PROVIDER: "disabled"
-  MODEL_NAME: "local-rule-engine"
+  MODEL_PROVIDER: {{ .Values.agent.modelProvider | quote }}
+  MODEL_NAME: {{ .Values.agent.modelName | quote }}
+  OPENAI_BASE_URL: {{ .Values.agent.openaiBaseUrl | quote }}

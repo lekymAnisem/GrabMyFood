@@ -30,6 +30,8 @@ spec:
               value: /var/run/secrets/agent/api-token
             - name: ALERTMANAGER_SHARED_SECRET_FILE
               value: /var/run/secrets/agent/alertmanager-secret
+            - name: OPENAI_API_KEY_FILE
+              value: /var/run/secrets/agent/openai-api-key
           volumeMounts:
             - name: agent-secrets
               mountPath: /var/run/secrets/agent

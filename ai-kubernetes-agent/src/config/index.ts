@@ -18,8 +18,9 @@ const envSchema = z.object({
   AUTH_TOKEN: z.string().optional(),
   AUTH_TOKEN_FILE: z.string().optional(),
   DATABASE_URL: z.string().optional(),
-  MODEL_PROVIDER: z.enum(["disabled", "openai-compatible"]).default("disabled"),
-  MODEL_NAME: z.string().default("local-rule-engine"),
+  MODEL_PROVIDER: z.enum(["disabled", "openai-compatible"]).default("openai-compatible"),
+  MODEL_NAME: z.string().default("llama3-70b-8192"),
+  OPENAI_BASE_URL: z.string().url().default("https://api.groq.com/openai/v1"),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_API_KEY_FILE: z.string().optional(),
   NOTIFICATION_WEBHOOK_URL: z.string().url().optional()
