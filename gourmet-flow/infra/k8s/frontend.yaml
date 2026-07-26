@@ -23,8 +23,19 @@ spec:
       containers:
         - name: frontend
           image: 630243422439.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-frontend:latest
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 101
+            runAsGroup: 101
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
           ports:
-            - containerPort: 80
+            - name: http
+              containerPort: 8080
+              protocol: TCP
           env:
             - name: VITE_API_GATEWAY_URL
               value: "/api"
@@ -35,13 +46,13 @@ spec:
           livenessProbe:
             httpGet:
               path: /
-              port: 80
+              port: 8080
             initialDelaySeconds: 10
             periodSeconds: 15
           readinessProbe:
             httpGet:
               path: /
-              port: 80
+              port: 8080
             initialDelaySeconds: 5
             periodSeconds: 10
           resources:
@@ -61,7 +72,8 @@ spec:
   selector:
     app: frontend
   ports:
-    - port: 80
-      targetPort: 80
+    - name: http
+      port: 80
+      targetPort: 8080
       protocol: TCP
   type: LoadBalancer

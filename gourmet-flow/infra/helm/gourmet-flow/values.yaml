@@ -396,13 +396,13 @@ services:
   frontend:
     enabled: true
     name: frontend
-    port: 80
+    port: 8080
     replicas: 2
     serviceType: LoadBalancer
     service:
       type: LoadBalancer
       port: 80
-      targetPort: 80
+      targetPort: 8080
     image:
       repository: grabmyfood-production-frontend
       tag: "5"
@@ -411,7 +411,7 @@ services:
     livenessProbe:
       enabled: true
       path: /
-      port: 80
+      port: 8080
       initialDelaySeconds: 15
       periodSeconds: 15
       timeoutSeconds: 5
@@ -419,7 +419,7 @@ services:
     readinessProbe:
       enabled: true
       path: /
-      port: 80
+      port: 8080
       initialDelaySeconds: 10
       periodSeconds: 10
       timeoutSeconds: 5
@@ -462,6 +462,9 @@ podSecurityContext:
   runAsNonRoot: true
   fsGroup: 1000
 containerSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 101
+  runAsGroup: 101
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: false
   capabilities:
