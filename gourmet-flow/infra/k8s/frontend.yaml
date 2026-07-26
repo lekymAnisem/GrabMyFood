@@ -22,7 +22,7 @@ spec:
             name: frontend-nginx-config
       containers:
         - name: frontend
-          image: gourmet-flow/frontend:latest
+          image: 630243422439.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-frontend:latest
           ports:
             - containerPort: 80
           env:
