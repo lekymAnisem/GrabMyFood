@@ -44,4 +44,5 @@ eks_node_max_size              = 3
 eks_admin_role_arn             = "arn:aws:iam::630243422439:user/Lekym"
 
 jenkins_instance_type        = "c7i.large"
-jenkins_root_volume_size     = 20
+jenkins_root_volume_size     = 50
+sonarqube_version            = "10.6.0.92116"

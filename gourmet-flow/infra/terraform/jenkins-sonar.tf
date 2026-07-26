@@ -25,7 +25,7 @@ resource "aws_iam_instance_profile" "jenkins" {
 
 resource "aws_security_group" "jenkins" {
   name        = "${local.name_prefix}-jenkins-sg"
-  description = "Security group for the Jenkins EC2 instance"
+  description = "Security group for the Jenkins + SonarQube EC2 instance"
   vpc_id      = aws_vpc.this.id
 
   ingress {
@@ -40,6 +40,14 @@ resource "aws_security_group" "jenkins" {
     description = "Jenkins web UI from admin CIDRs"
     from_port   = 8080
     to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = var.admin_allowed_cidr_blocks
+  }
+
+  ingress {
+    description = "SonarQube web UI from admin CIDRs"
+    from_port   = 9000
+    to_port     = 9000
     protocol    = "tcp"
     cidr_blocks = var.admin_allowed_cidr_blocks
   }
@@ -71,8 +79,12 @@ resource "aws_instance" "jenkins" {
     encrypted   = true
   }
 
+  user_data = templatefile("${path.module}/userdata-jenkins.sh", {
+    sonarqube_version = var.sonarqube_version
+  })
+
   tags = {
-    Name = "jenkins-server"
+    Name = "${local.name_prefix}-jenkins"
   }
 }
 

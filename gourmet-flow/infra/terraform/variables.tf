@@ -208,3 +208,9 @@ variable "jenkins_root_volume_size" {
   type        = number
   default     = 20
 }
+
+variable "sonarqube_version" {
+  description = "SonarQube version to install on the Jenkins server"
+  type        = string
+  default     = "10.6.0.92116"
+}

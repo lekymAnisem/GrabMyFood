@@ -84,6 +84,11 @@ output "jenkins_url" {
   value       = "http://${aws_eip.jenkins.public_ip}:8080"
 }
 
+output "sonarqube_url" {
+  description = "SonarQube access URL"
+  value       = "http://${aws_eip.jenkins.public_ip}:9000"
+}
+
 output "ssh_jenkins_command" {
   description = "SSH command to connect to the Jenkins instance"
   value       = "ssh -i ${var.ssh_private_key_path} ubuntu@${aws_eip.jenkins.public_ip}"
