@@ -20,6 +20,6 @@ const notifier = new Notifier(config.NOTIFICATION_WEBHOOK_URL);
 
 const app = createServer({ analyzer, incidents, approvals, audit, runbooks, notifier, logger });
 
-app.listen(config.PORT, () => {
+app.listen(config.PORT, "0.0.0.0", () => {
   logger.info({ port: config.PORT, mode: config.AGENT_MODE, cluster: config.CLUSTER_NAME }, "AI Kubernetes agent listening");
 });
