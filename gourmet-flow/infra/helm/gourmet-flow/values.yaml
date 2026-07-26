@@ -442,8 +442,7 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
   rules:
-    - host: ""
-      paths:
+    - paths:
         - path: /
           pathType: Prefix
           serviceName: frontend
