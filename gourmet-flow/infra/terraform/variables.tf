@@ -73,7 +73,7 @@ variable "monitoring_instance_type" {
 variable "monitoring_root_volume_size" {
   description = "Root EBS volume size in GB for the monitoring server"
   type        = number
-  default     = 8
+  default     = 20
 }
 
 variable "prometheus_enabled" {
