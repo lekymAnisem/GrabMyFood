@@ -322,6 +322,36 @@ The Helm chart defaults to `secrets.create=false`, so Argo CD will not create th
 
 ---
 
+## Prometheus Metrics
+
+Every backend service exposes Prometheus metrics at `/metrics`, including default Node.js process metrics and `http_request_duration_seconds`.
+
+After building and deploying new service images, verify one service from inside the cluster:
+
+```bash
+kubectl port-forward svc/api-gateway 4000:4000 -n gourmet-flow
+curl http://localhost:4000/metrics
+```
+
+The plain Kubernetes Services include Prometheus scrape annotations. If your cluster uses the Prometheus Operator, apply the optional ServiceMonitor after confirming the CRD exists:
+
+```bash
+kubectl get crd servicemonitors.monitoring.coreos.com
+kubectl apply -f infra/k8s/servicemonitor.yaml
+```
+
+For Helm deployments, enable the chart-managed ServiceMonitor:
+
+```bash
+helm upgrade --install grabmyfood infra/helm/gourmet-flow \
+  --namespace gourmet-flow \
+  --set metrics.serviceMonitor.enabled=true
+```
+
+The ServiceMonitor targets the backend services only; the frontend is intentionally skipped.
+
+---
+
 ## Shared Packages
 
 Cross-cutting concerns are extracted into `packages/` for reuse:

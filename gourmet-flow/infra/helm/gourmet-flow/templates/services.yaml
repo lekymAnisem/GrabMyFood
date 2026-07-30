@@ -14,6 +14,12 @@ metadata:
   labels:
     {{- include "gourmet-flow.labels" $ | nindent 4 }}
     app.kubernetes.io/component: {{ $component }}
+  {{- if and $.Values.metrics.enabled (not $svc.skipMetrics) }}
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: {{ $.Values.metrics.path | default "/metrics" | quote }}
+    prometheus.io/port: {{ $servicePort | quote }}
+  {{- end }}
 spec:
   selector:
     app.kubernetes.io/name: {{ include "gourmet-flow.name" $ }}

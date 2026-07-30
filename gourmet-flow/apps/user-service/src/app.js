@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import pino from 'pino';
 import userRoutes from './routes/userRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { setupMetrics } from './metrics.js';
 
 const logger = pino({
   transport: {
@@ -15,6 +16,8 @@ const logger = pino({
 });
 
 const app = express();
+
+setupMetrics(app);
 
 app.use(helmet());
 app.use(cors());

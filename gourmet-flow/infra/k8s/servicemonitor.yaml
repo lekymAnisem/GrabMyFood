@@ -1,0 +1,31 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: gourmet-flow
+  namespace: gourmet-flow
+  labels:
+    app.kubernetes.io/name: gourmet-flow
+    app.kubernetes.io/part-of: gourmet-flow
+spec:
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - api-gateway
+          - auth-service
+          - user-service
+          - restaurant-service
+          - menu-service
+          - cart-service
+          - order-service
+          - payment-service
+          - delivery-service
+  namespaceSelector:
+    matchNames:
+      - gourmet-flow
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s

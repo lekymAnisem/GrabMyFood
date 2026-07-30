@@ -398,6 +398,7 @@ services:
     name: frontend
     port: 8080
     replicas: 2
+    skipMetrics: true
     serviceType: LoadBalancer
     service:
       type: LoadBalancer
@@ -452,6 +453,14 @@ ingress:
           serviceName: api-gateway
           servicePort: 4000
   tls: []
+metrics:
+  enabled: true
+  path: /metrics
+  interval: 30s
+  scrapeTimeout: 10s
+  serviceMonitor:
+    enabled: false
+    labels: {}
 serviceAccount:
   create: true
   name: gourmet-flow

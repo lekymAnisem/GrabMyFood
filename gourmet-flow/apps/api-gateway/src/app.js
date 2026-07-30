@@ -6,8 +6,11 @@ import requestId from './middleware/requestId.js';
 import logger from './middleware/logger.js';
 import config from './config/index.js';
 import setupProxyRoutes from './routes/proxyRoutes.js';
+import { setupMetrics } from './metrics.js';
 
 const app = express();
+
+setupMetrics(app);
 
 app.use(helmet());
 app.use(cors({ origin: config.corsOrigin.split(','), credentials: true }));
