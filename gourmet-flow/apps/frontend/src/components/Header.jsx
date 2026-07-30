@@ -8,6 +8,7 @@ export default function Header() {
   const { itemCount } = useCart();
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
+  const devopsAiUrl = import.meta.env.VITE_DEVOPS_AI_URL || 'http://localhost:5174';
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -26,6 +27,7 @@ export default function Header() {
             <Link to="/" className="text-primary font-bold border-b-2 border-primary py-2 font-label-md text-label-md">Offers</Link>
             <span className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md cursor-pointer">Partners</span>
             <span className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md cursor-pointer">Corporate</span>
+            <a href={devopsAiUrl} target="_blank" rel="noreferrer" className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md">DevOps AI</a>
           </div>
         </div>
         <div className="flex items-center gap-6">

@@ -19,6 +19,8 @@
     "dev:order": "npm run dev --workspace=apps/order-service",
     "dev:payment": "npm run dev --workspace=apps/payment-service",
     "dev:delivery": "npm run dev --workspace=apps/delivery-service",
+    "dev:agent": "bash scripts/start-devops-agent.sh",
+    "k8s:create-secret": "bash scripts/create-k8s-secret.sh",
     "build": "npm run build --workspace=apps/frontend",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --ignore-pattern node_modules --ignore-pattern dist",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\" --ignore-path .gitignore",

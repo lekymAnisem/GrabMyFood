@@ -264,6 +264,61 @@ The gateway runs on port `4000` and forwards requests to downstream services by 
 | `/api/orders/*` | Order Service | Create, list, status, history |
 | `/api/payments/*` | Payment Service | Process payment, transaction lookup |
 | `/api/delivery/*` | Delivery Service | Track delivery, driver info |
+| `/api/devops-ai/*` | DevOps AI Agent | Optional proxy to the DevOps AI backend `/api/v1/*` |
+
+---
+
+## DevOps AI Agent Connection
+
+This repo is configured to connect to your local DevOps AI agent at:
+
+```bash
+/Users/admin/Documents/Ai Agent/devops-ai-command-center
+```
+
+Start Gourmet Flow normally, then run the agent from the Gourmet Flow monorepo root:
+
+```bash
+npm run dev:agent
+```
+
+The script starts the DevOps AI backend on `http://localhost:5001` and its frontend on `http://localhost:5174` to avoid colliding with Gourmet Flow's frontend on `5173`. Gourmet Flow also exposes a gateway status check at:
+
+```bash
+curl http://localhost:4000/devops-ai/status
+```
+
+The frontend navigation includes a `DevOps AI` link controlled by `VITE_DEVOPS_AI_URL`.
+
+---
+
+## Kubernetes Secret
+
+Production deployments reference a Kubernetes Secret named `gourmet-flow-secrets` in the `gourmet-flow` namespace. If pods show `CreateContainerConfigError` with `secret "gourmet-flow-secrets" not found`, create or update the Secret before restarting deployments:
+
+```bash
+export JWT_SECRET="..."
+export JWT_REFRESH_SECRET="..."
+export AUTH_DATABASE_URL="..."
+export USER_DATABASE_URL="..."
+export RESTAURANT_DATABASE_URL="..."
+export MENU_DATABASE_URL="..."
+export CART_DATABASE_URL="..."
+export ORDER_DATABASE_URL="..."
+export PAYMENT_DATABASE_URL="..."
+export DELIVERY_DATABASE_URL="..."
+
+npm run k8s:create-secret
+kubectl rollout restart deployment/api-gateway -n gourmet-flow
+```
+
+Use the same pattern for any other stuck deployment, or restart all workloads in the namespace:
+
+```bash
+kubectl rollout restart deployment -n gourmet-flow
+```
+
+The Helm chart defaults to `secrets.create=false`, so Argo CD will not create this Secret unless you explicitly provide secure values or create the Secret out of band.
 
 ---
 

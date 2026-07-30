@@ -20,6 +20,7 @@ const config = {
   orderServiceUrl: process.env.ORDER_SERVICE_URL || 'http://localhost:4006',
   paymentServiceUrl: process.env.PAYMENT_SERVICE_URL || 'http://localhost:4007',
   deliveryServiceUrl: process.env.DELIVERY_SERVICE_URL || 'http://localhost:4008',
+  devopsAiAgentUrl: process.env.DEVOPS_AI_AGENT_URL || 'http://localhost:5001',
 };
 
 export default config;

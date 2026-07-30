@@ -11,12 +11,17 @@ const routes = [
   { path: '/api/orders', target: config.orderServiceUrl },
   { path: '/api/payments', target: config.paymentServiceUrl },
   { path: '/api/delivery', target: config.deliveryServiceUrl },
+  {
+    path: '/api/devops-ai',
+    target: config.devopsAiAgentUrl,
+    rewrite: (req) => req.originalUrl.replace(/^\/api\/devops-ai/, '/api/v1'),
+  },
 ];
 
-function forwardRequest(req, res, target) {
+function forwardRequest(req, res, target, rewrite) {
   const targetUrl = new URL(target);
   const body = req.body ? JSON.stringify(req.body) : null;
-  const targetPath = req.originalUrl.replace(/^\/api/, '');
+  const targetPath = rewrite ? rewrite(req) : req.originalUrl.replace(/^\/api/, '');
 
   const options = {
     hostname: targetUrl.hostname,
@@ -74,8 +79,8 @@ function forwardRequest(req, res, target) {
 }
 
 export default function setupProxyRoutes(app) {
-  routes.forEach(({ path, target }) => {
-    app.use(path, (req, res) => forwardRequest(req, res, target));
+  routes.forEach(({ path, target, rewrite }) => {
+    app.use(path, (req, res) => forwardRequest(req, res, target, rewrite));
   });
 
   app.get('/health', (req, res) => {
@@ -89,5 +94,45 @@ export default function setupProxyRoutes(app) {
   app.get('/health/downstream', async (req, res) => {
     const services = await aggregateHealth();
     res.json({ status: 'ok', services });
+  });
+
+  app.get('/devops-ai/status', (_req, res) => {
+    const agentHealthUrl = new URL('/health', config.devopsAiAgentUrl);
+    const request = http.get(agentHealthUrl, { timeout: 5000 }, (agentRes) => {
+      let responseBody = '';
+
+      agentRes.on('data', (chunk) => {
+        responseBody += chunk;
+      });
+
+      agentRes.on('end', () => {
+        let agentResponse = responseBody;
+
+        try {
+          agentResponse = responseBody ? JSON.parse(responseBody) : null;
+        } catch {
+          agentResponse = responseBody || null;
+        }
+
+        res.status(agentRes.statusCode === 200 ? 200 : 502).json({
+          status: agentRes.statusCode === 200 ? 'connected' : 'unhealthy',
+          url: config.devopsAiAgentUrl,
+          agentStatusCode: agentRes.statusCode,
+          agentResponse,
+        });
+      });
+    });
+
+    request.on('error', (error) => {
+      res.status(502).json({
+        status: 'unreachable',
+        url: config.devopsAiAgentUrl,
+        error: error.message,
+      });
+    });
+
+    request.on('timeout', () => {
+      request.destroy();
+    });
   });
 }
