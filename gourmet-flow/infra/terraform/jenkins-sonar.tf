@@ -57,7 +57,7 @@ resource "aws_security_group" "jenkins" {
     from_port   = 8081
     to_port     = 8081
     protocol    = "tcp"
-    cidr_blocks = concat(var.admin_allowed_cidr_blocks, var.monitoring_allowed_cidr_blocks)
+    cidr_blocks = distinct(concat(var.admin_allowed_cidr_blocks, var.monitoring_allowed_cidr_blocks))
   }
 
   egress {

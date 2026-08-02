@@ -151,6 +151,26 @@ resource "aws_eks_access_policy_association" "admin_role" {
   }
 }
 
+resource "aws_eks_access_entry" "monitoring_role" {
+  count = var.eks_enabled ? 1 : 0
+
+  cluster_name  = aws_eks_cluster.this[0].name
+  principal_arn = aws_iam_role.monitoring.arn
+  type          = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "monitoring_role" {
+  count = var.eks_enabled ? 1 : 0
+
+  cluster_name  = aws_eks_cluster.this[0].name
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  principal_arn = aws_iam_role.monitoring.arn
+
+  access_scope {
+    type = "cluster"
+  }
+}
+
 resource "aws_eks_node_group" "this" {
   count           = var.eks_enabled ? 1 : 0
   cluster_name    = aws_eks_cluster.this[0].name

@@ -12,22 +12,23 @@ global:
   existingSecretName: "gourmet-flow-secrets"
   jwtAccessExpiration: "15m"
   jwtRefreshExpiration: "7d"
-# Do not commit real Neon URLs, passwords, JWT secrets, or API credentials.
-# Create this secret outside Helm, then let Argo CD deploy workloads that read it.
-# Required keys:
-# - JWT_SECRET
-# - JWT_REFRESH_SECRET
-# - AUTH_DATABASE_URL
-# - USER_DATABASE_URL
-# - RESTAURANT_DATABASE_URL
-# - MENU_DATABASE_URL
-# - CART_DATABASE_URL
-# - ORDER_DATABASE_URL
-# - PAYMENT_DATABASE_URL
-# - DELIVERY_DATABASE_URL
+# The Secret is created by this chart (secrets.create=true) so Argo CD always
+# provisions it on sync. Do not commit real Neon URLs, passwords, JWT secrets,
+# or API credentials to git; prefer externalizing them via SealedSecrets or
+# an External Secrets operator in a production hardening pass.
 secrets:
-  create: false
+  create: true
   existingSecretName: "gourmet-flow-secrets"
+  jwtSecret: "change-me-in-production"
+  jwtRefreshSecret: "change-me-in-production"
+  authDatabaseUrl: "postgresql://neondb_owner:npg_RYj3wZq1xXhr@ep-raspy-glade-a74ngzf5-pooler.ap-southeast-2.aws.neon.tech/neondb?sslmode=require"
+  userDatabaseUrl: "postgresql://neondb_owner:npg_RYj3wZq1xXhr@ep-raspy-glade-a74ngzf5-pooler.ap-southeast-2.aws.neon.tech/neondb?sslmode=require"
+  restaurantDatabaseUrl: "postgresql://neondb_owner:npg_RYj3wZq1xXhr@ep-raspy-glade-a74ngzf5-pooler.ap-southeast-2.aws.neon.tech/neondb?sslmode=require"
+  menuDatabaseUrl: "postgresql://neondb_owner:npg_RYj3wZq1xXhr@ep-raspy-glade-a74ngzf5-pooler.ap-southeast-2.aws.neon.tech/neondb?sslmode=require"
+  cartDatabaseUrl: "postgresql://neondb_owner:npg_RYj3wZq1xXhr@ep-raspy-glade-a74ngzf5-pooler.ap-southeast-2.aws.neon.tech/neondb?sslmode=require"
+  orderDatabaseUrl: "postgresql://neondb_owner:npg_RYj3wZq1xXhr@ep-raspy-glade-a74ngzf5-pooler.ap-southeast-2.aws.neon.tech/neondb?sslmode=require"
+  paymentDatabaseUrl: "postgresql://neondb_owner:npg_RYj3wZq1xXhr@ep-raspy-glade-a74ngzf5-pooler.ap-southeast-2.aws.neon.tech/neondb?sslmode=require"
+  deliveryDatabaseUrl: "postgresql://neondb_owner:npg_RYj3wZq1xXhr@ep-raspy-glade-a74ngzf5-pooler.ap-southeast-2.aws.neon.tech/neondb?sslmode=require"
 config:
   NODE_ENV: "production"
   JWT_ACCESS_EXPIRATION: "15m"

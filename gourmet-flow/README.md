@@ -318,7 +318,7 @@ Use the same pattern for any other stuck deployment, or restart all workloads in
 kubectl rollout restart deployment -n gourmet-flow
 ```
 
-The Helm chart defaults to `secrets.create=false`, so Argo CD will not create this Secret unless you explicitly provide secure values or create the Secret out of band.
+The Helm chart now sets `secrets.create=true`, so Argo CD creates and manages the `gourmet-flow-secrets` Secret automatically on every sync. The values live in `infra/helm/gourmet-flow/values.yaml` and mirror `infra/k8s/secrets.yaml`. The manual out-of-band flow above is only needed if you rotate the values.
 
 ---
 
