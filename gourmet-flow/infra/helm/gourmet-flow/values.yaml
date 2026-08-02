@@ -460,8 +460,9 @@ metrics:
   interval: 30s
   scrapeTimeout: 10s
   serviceMonitor:
-    enabled: false
-    labels: {}
+    enabled: true
+    labels:
+      release: monitoring
 serviceAccount:
   create: true
   name: gourmet-flow
