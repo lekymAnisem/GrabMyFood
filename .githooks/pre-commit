@@ -1,0 +1,19 @@
+#!/bin/sh
+
+echo "🔐 Running Gitleaks security scan..."
+
+gitleaks git --pre-commit --redact
+
+STATUS=$?
+
+if [ $STATUS -ne 0 ]; then
+    echo ""
+    echo "❌ Gitleaks detected potential secrets!"
+    echo "🚫 Commit blocked."
+    echo ""
+    echo "Review the findings above, remove the secret, and try again."
+    exit 1
+fi
+
+echo "✅ Gitleaks scan passed."
+exit 0
