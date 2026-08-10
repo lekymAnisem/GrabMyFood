@@ -34,6 +34,9 @@ pipeline {
 
         SONAR_SERVER  = 'Sonarserver'
         SONAR_TOOL    = 'SonarQube'
+
+        SNYK_TOKEN    = credentials('snyk-token')
+        NVD_API_KEY   = credentials('nvd-api-key')
     }
 
     stages {
@@ -81,6 +84,8 @@ pipeline {
                         docker --version
                         aws --version
                         trivy --version
+                        dependency-check --version
+                        snyk --version
                         yq --version
                     '''
                 }
@@ -300,6 +305,93 @@ pipeline {
                     } catch (err) {
                         echo "SonarQube frontend quality gate check failed: ${err.message}"
                         echo "Continuing pipeline (abortPipeline: false)."
+                    }
+                }
+            }
+        }
+
+        stage('Security Scans') {
+            parallel {
+                stage('OWASP Dependency-Check') {
+                    steps {
+                        dir('gourmet-flow') {
+                            sh '''
+                                set -e
+                                command -v dependency-check >/dev/null 2>&1 || {
+                                    echo "ERROR: OWASP dependency-check CLI is not installed on the Jenkins agent"
+                                    exit 1
+                                }
+
+                                NVD_KEY="${NVD_API_KEY:-}"
+                                NVD_ARGS=()
+                                if [ -n "$NVD_KEY" ]; then
+                                    NVD_ARGS=(--nvdApiKey "$NVD_KEY")
+                                    echo "Using NVD API key for CVE data"
+                                else
+                                    echo "WARNING: NVD_API_KEY not set; dependency-check will use the public NVD API"
+                                fi
+
+                                rm -rf owasp-reports && mkdir -p owasp-reports
+
+                                dependency-check \
+                                    --project "GourmetFlow" \
+                                    --scan . \
+                                    --format HTML \
+                                    --format JSON \
+                                    --out owasp-reports \
+                                    --failOnCVSS 7 \
+                                    --exclude "**/node_modules/**" \
+                                    --exclude "**/.git/**" \
+                                    --exclude "**/dist/**" \
+                                    --exclude "**/coverage/**" \
+                                    "${NVD_ARGS[@]}"
+
+                                echo "OWASP Dependency-Check passed: no vulnerabilities with CVSS >= 7."
+                            '''
+                        }
+                    }
+
+                    post {
+                        always {
+                            archiveArtifacts(
+                                artifacts: 'gourmet-flow/owasp-reports/**',
+                                allowEmptyArchive: true
+                            )
+                        }
+                    }
+                }
+
+                stage('Snyk Scan') {
+                    steps {
+                        dir('gourmet-flow') {
+                            sh '''
+                                set -e
+                                command -v snyk >/dev/null 2>&1 || {
+                                    echo "ERROR: snyk CLI is not installed on the Jenkins agent"
+                                    exit 1
+                                }
+
+                                snyk auth "${SNYK_TOKEN}"
+
+                                echo "Running Snyk open-source dependency scan (fails on HIGH/CRITICAL)..."
+                                snyk test \
+                                    --all-projects \
+                                    --severity-threshold=high \
+                                    --json-file-output=snyk-report.json
+
+                                echo "Running Snyk code analysis (informational)..."
+                                snyk code test --severity-threshold=high || true
+                            '''
+                        }
+                    }
+
+                    post {
+                        always {
+                            archiveArtifacts(
+                                artifacts: 'gourmet-flow/snyk-report.json',
+                                allowEmptyArchive: true
+                            )
+                        }
                     }
                 }
             }
