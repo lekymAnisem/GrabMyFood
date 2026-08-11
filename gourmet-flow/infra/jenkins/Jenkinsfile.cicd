@@ -419,6 +419,30 @@ pipeline {
             }
         }
 
+        stage('Trivy Config Scan (Dockerfile/IaC)') {
+            steps {
+                dir('gourmet-flow') {
+                    sh '''
+                        set +e
+                        trivy config --format table --severity HIGH,CRITICAL \
+                            --output trivy-config.txt \
+                            apps infra/k8s infra/helm
+                        echo "Trivy config exit code: $?"
+                        exit 0
+                    '''
+                }
+            }
+
+            post {
+                always {
+                    archiveArtifacts(
+                        artifacts: 'gourmet-flow/trivy-config.txt',
+                        allowEmptyArchive: true
+                    )
+                }
+            }
+        }
+
         stage('Free Up Disk Space') {
             steps {
                 sh '''
@@ -489,6 +513,37 @@ pipeline {
                         --tag "${IMAGE}:latest" \
                         ./gourmet-flow/apps/frontend
                 '''
+            }
+        }
+
+        stage('Validate Non-Root Images') {
+            steps {
+                script {
+                    def services = [
+                        api_gateway: env.ECR_API_GATEWAY,
+                        auth_service: env.ECR_AUTH_SERVICE,
+                        user_service: env.ECR_USER_SERVICE,
+                        restaurant_service: env.ECR_RESTAURANT_SERVICE,
+                        menu_service: env.ECR_MENU_SERVICE,
+                        cart_service: env.ECR_CART_SERVICE,
+                        order_service: env.ECR_ORDER_SERVICE,
+                        payment_service: env.ECR_PAYMENT_SERVICE,
+                        delivery_service: env.ECR_DELIVERY_SERVICE,
+                        frontend: env.ECR_FRONTEND
+                    ]
+                    services.each { label, repo ->
+                        def image = "${env.AWS_ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com/${repo}:${env.IMAGE_TAG}"
+                        def user = sh(
+                            script: "docker inspect --format '{{.Config.User}}' \"${image}\"",
+                            returnStdout: true
+                        ).trim()
+                        echo "Validating ${label}: image user = '${user}' (expect non-empty, non-root)"
+                        if (user == '' || user == 'root' || user == '0:0' || user == '0') {
+                            error "SECURITY GATE FAILED: ${label} image runs as root (user='${user}'). Refusing to push."
+                        }
+                    }
+                    echo "All ${services.size()} images run as non-root."
+                }
             }
         }
 

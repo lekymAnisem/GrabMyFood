@@ -471,15 +471,17 @@ podAnnotations: {}
 podSecurityContext:
   runAsNonRoot: true
   fsGroup: 1000
+# Container security hardening. Images define their own non-root user;
+# Kubernetes enforces non-root + drops all capabilities + seccomp.
 containerSecurityContext:
   runAsNonRoot: true
-  runAsUser: 101
-  runAsGroup: 101
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: false
   capabilities:
     drop:
       - ALL
+  seccompProfile:
+    type: RuntimeDefault
 nodeSelector: {}
 tolerations: []
 affinity: {}

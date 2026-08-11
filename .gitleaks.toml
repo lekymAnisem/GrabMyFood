@@ -1,0 +1,8 @@
+title = "Gitleaks config for GrabMyFood"
+
+[allowlist]
+description = "Placeholder tokens (replace-with-strong-*) in documentation curl examples, not real secrets"
+paths = [
+    "ai-kubernetes-agent/README.md",
+    "ai-kubernetes-agent/docs/incident-simulations.md",
+]

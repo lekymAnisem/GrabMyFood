@@ -15,9 +15,22 @@ spec:
       labels:
         app: api-gateway
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: api-gateway
           image: 630243422439.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-api-gateway:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - containerPort: 4000
           envFrom:
@@ -47,6 +60,9 @@ spec:
             limits:
               cpu: "300m"
               memory: "256Mi"
+      volumes:
+        - name: tmp
+          emptyDir: {}
       terminationGracePeriodSeconds: 30
 ---
 apiVersion: v1
@@ -87,9 +103,22 @@ spec:
       labels:
         app: auth-service
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: auth-service
           image: 630243422439.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-auth-service:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - containerPort: 4001
           envFrom:
@@ -119,6 +148,9 @@ spec:
             limits:
               cpu: "300m"
               memory: "256Mi"
+      volumes:
+        - name: tmp
+          emptyDir: {}
       terminationGracePeriodSeconds: 30
 ---
 apiVersion: v1
@@ -159,9 +191,22 @@ spec:
       labels:
         app: user-service
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: user-service
           image: 630243422439.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-user-service:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - containerPort: 4002
           envFrom:
@@ -191,6 +236,9 @@ spec:
             limits:
               cpu: "300m"
               memory: "256Mi"
+      volumes:
+        - name: tmp
+          emptyDir: {}
       terminationGracePeriodSeconds: 30
 ---
 apiVersion: v1
@@ -231,9 +279,22 @@ spec:
       labels:
         app: restaurant-service
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: restaurant-service
           image: 630243422439.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-restaurant-service:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - containerPort: 4003
           envFrom:
@@ -263,6 +324,9 @@ spec:
             limits:
               cpu: "300m"
               memory: "256Mi"
+      volumes:
+        - name: tmp
+          emptyDir: {}
       terminationGracePeriodSeconds: 30
 ---
 apiVersion: v1
@@ -303,9 +367,22 @@ spec:
       labels:
         app: menu-service
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: menu-service
           image: 630243422439.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-menu-service:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - containerPort: 4004
           envFrom:
@@ -335,6 +412,9 @@ spec:
             limits:
               cpu: "300m"
               memory: "256Mi"
+      volumes:
+        - name: tmp
+          emptyDir: {}
       terminationGracePeriodSeconds: 30
 ---
 apiVersion: v1
@@ -375,9 +455,22 @@ spec:
       labels:
         app: cart-service
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: cart-service
           image: 630243422439.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-cart-service:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - containerPort: 4005
           envFrom:
@@ -407,6 +500,9 @@ spec:
             limits:
               cpu: "300m"
               memory: "256Mi"
+      volumes:
+        - name: tmp
+          emptyDir: {}
       terminationGracePeriodSeconds: 30
 ---
 apiVersion: v1
@@ -447,9 +543,22 @@ spec:
       labels:
         app: order-service
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: order-service
           image: 630243422439.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-order-service:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - containerPort: 4006
           envFrom:
@@ -479,6 +588,9 @@ spec:
             limits:
               cpu: "300m"
               memory: "256Mi"
+      volumes:
+        - name: tmp
+          emptyDir: {}
       terminationGracePeriodSeconds: 30
 ---
 apiVersion: v1
@@ -519,9 +631,22 @@ spec:
       labels:
         app: payment-service
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: payment-service
           image: 630243422439.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-payment-service:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - containerPort: 4007
           envFrom:
@@ -551,6 +676,9 @@ spec:
             limits:
               cpu: "300m"
               memory: "256Mi"
+      volumes:
+        - name: tmp
+          emptyDir: {}
       terminationGracePeriodSeconds: 30
 ---
 apiVersion: v1
@@ -591,9 +719,22 @@ spec:
       labels:
         app: delivery-service
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: delivery-service
           image: 630243422439.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-delivery-service:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - containerPort: 4008
           envFrom:
@@ -623,6 +764,9 @@ spec:
             limits:
               cpu: "300m"
               memory: "256Mi"
+      volumes:
+        - name: tmp
+          emptyDir: {}
       terminationGracePeriodSeconds: 30
 ---
 apiVersion: v1
