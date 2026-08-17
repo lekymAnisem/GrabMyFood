@@ -1,0 +1,469 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  # Variables (Settings > Secrets and variables > Actions > Variables)
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+  EKS_CLUSTER: ${{ vars.EKS_CLUSTER }}
+  ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
+  # App config
+  APP_NAME: GrabMyFood
+  APP_NAME_LOWER: grabmyfood
+  ENVIRONMENT: production
+  VALUES_FILE: infra/helm/gourmet-flow/values.yaml
+  # IMAGE_TAG mirrors BUILD_NUMBER from Jenkins; uses the GitHub run number
+  IMAGE_TAG: ${{ github.run_number }}
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify Project & Tools
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: gourmet-flow/package-lock.json
+
+      - name: Setup Java (SonarQube runner)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          version: latest
+
+      - name: Setup yq
+        uses: mikefarah/yq@v4.44.3
+
+      - name: Verify Project Structure
+        working-directory: gourmet-flow
+        run: |
+          set -e
+          echo "Workspace: $(pwd)"
+          ls -la
+
+          for svc in api-gateway auth-service user-service restaurant-service menu-service cart-service order-service payment-service delivery-service frontend; do
+            test -d "apps/$svc" || { echo "ERROR: apps/$svc not found"; exit 1; }
+          done
+
+          test -f package.json || { echo "ERROR: root package.json not found"; exit 1; }
+          test -f "$VALUES_FILE" || { echo "ERROR: $VALUES_FILE not found"; exit 1; }
+
+      - name: Verify Required Tools
+        working-directory: gourmet-flow
+        run: |
+          set -e
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          java -version
+          docker --version
+          aws --version || true
+          trivy --version
+          yq --version
+
+  test:
+    name: Install Dependencies, TypeScript & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: gourmet-flow/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: gourmet-flow
+        run: |
+          set -e
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Backend TypeScript Check
+        working-directory: gourmet-flow
+        run: |
+          set -e
+          for dir in apps/api-gateway apps/auth-service apps/user-service apps/restaurant-service apps/menu-service apps/cart-service apps/order-service apps/payment-service apps/delivery-service; do
+            if [ -d "$dir" ] && [ -f "$dir/package.json" ]; then
+              echo "--- TypeScript checking $dir ---"
+              (cd "$dir" && {
+                if npm run 2>/dev/null | grep -q "typecheck"; then
+                  npm run typecheck
+                elif [ -x node_modules/.bin/tsc ]; then
+                  npx --no-install tsc --noEmit
+                else
+                  echo "TypeScript not configured. Skipping."
+                fi
+              })
+            fi
+          done
+
+      - name: Frontend TypeScript Check
+        working-directory: gourmet-flow/apps/frontend
+        run: |
+          set -e
+          if npm run 2>/dev/null | grep -q "typecheck"; then
+            npm run typecheck
+          elif [ -x node_modules/.bin/tsc ]; then
+            npx --no-install tsc -b --noEmit
+          else
+            echo "TypeScript not configured. Skipping."
+          fi
+
+      - name: Backend Tests
+        working-directory: gourmet-flow
+        run: |
+          set -e
+          for dir in apps/api-gateway apps/auth-service apps/user-service apps/restaurant-service apps/menu-service apps/cart-service apps/order-service apps/payment-service apps/delivery-service; do
+            if [ -d "$dir" ] && [ -f "$dir/package.json" ]; then
+              echo "--- Testing $dir ---"
+              (cd "$dir" && {
+                if npm run 2>/dev/null | grep -q "test"; then
+                  npm test
+                else
+                  echo "No test script configured"
+                fi
+              })
+            fi
+          done
+
+      - name: Frontend Tests
+        working-directory: gourmet-flow/apps/frontend
+        run: |
+          set -e
+          if npm run 2>/dev/null | grep -q "test"; then
+            npm test
+          else
+            echo "No frontend test script configured"
+          fi
+
+  sonarqube:
+    name: SonarQube Analysis & Quality Gates
+    needs: [verify, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: SonarQube Backend Analysis
+        uses: SonarSource/sonarqube-scan-action@v5
+        with:
+          projectBaseDir: gourmet-flow
+          args: >
+            -Dsonar.projectKey=gourmet-flow-backend
+            -Dsonar.projectName="Gourmet Flow Backend"
+            -Dsonar.sources=apps
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.exclusions="apps/frontend/**,node_modules/**,dist/**,coverage/**"
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: Backend Quality Gate
+        uses: SonarSource/sonarqube-quality-gate-action@v2
+        timeout-minutes: 10
+        with:
+          projectKey: gourmet-flow-backend
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: SonarQube Frontend Analysis
+        uses: SonarSource/sonarqube-scan-action@v5
+        with:
+          projectBaseDir: gourmet-flow
+          args: >
+            -Dsonar.projectKey=gourmet-flow-frontend
+            -Dsonar.projectName="Gourmet Flow Frontend"
+            -Dsonar.sources=apps/frontend/src
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.exclusions="node_modules/**,dist/**,coverage/**"
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: Frontend Quality Gate
+        uses: SonarSource/sonarqube-quality-gate-action@v2
+        timeout-minutes: 10
+        with:
+          projectKey: gourmet-flow-frontend
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  security:
+    name: Security Scans
+    needs: [verify, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: gourmet-flow/package-lock.json
+
+      - name: Install Dependencies (for Snyk scan)
+        working-directory: gourmet-flow
+        run: |
+          set -e
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Setup Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          version: latest
+
+      - name: OWASP Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        id: dependency-check
+        with:
+          project: GourmetFlow
+          path: .
+          format: HTML
+          out: owasp-reports
+          args: >
+            --failOnCVSS 7
+            --exclude "**/node_modules/**"
+            --exclude "**/.git/**"
+            --exclude "**/dist/**"
+            --exclude "**/coverage/**"
+
+      - name: Upload OWASP Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: owasp-reports
+          path: owasp-reports/**
+          if-no-files-found: ignore
+
+      - name: Setup Snyk CLI
+        uses: snyk/actions/setup@master
+
+      - name: Snyk Open Source Scan
+        uses: snyk/actions/node@master
+        working-directory: gourmet-flow
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --all-projects --severity-threshold=high
+
+      - name: Snyk Code Analysis (informational)
+        run: |
+          set -e
+          snyk code test --severity-threshold=high || true
+        working-directory: gourmet-flow
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Trivy File System Scan
+        working-directory: gourmet-flow
+        run: |
+          set +e
+          trivy fs --format table --severity HIGH,CRITICAL --output trivy-fs.txt .
+          echo "Trivy exit code: $?"
+          exit 0
+
+      - name: Upload Trivy FS Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-fs.txt
+          path: gourmet-flow/trivy-fs.txt
+          if-no-files-found: ignore
+
+      - name: Trivy Config Scan (Dockerfile/IaC)
+        working-directory: gourmet-flow
+        run: |
+          set +e
+          trivy config --format table --severity HIGH,CRITICAL \
+            --output trivy-config.txt \
+            apps infra/k8s infra/helm
+          echo "Trivy config exit code: $?"
+          exit 0
+
+      - name: Upload Trivy Config Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-config.txt
+          path: gourmet-flow/trivy-config.txt
+          if-no-files-found: ignore
+
+  build-push:
+    name: Build & Push ${{ matrix.service }}
+    needs: [sonarqube, security]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - auth-service
+          - user-service
+          - restaurant-service
+          - menu-service
+          - cart-service
+          - order-service
+          - payment-service
+          - delivery-service
+          - frontend
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Ensure ECR Repository Exists
+        run: |
+          set -e
+          REPO="${{ env.APP_NAME_LOWER }}-${{ env.ENVIRONMENT }}-${{ matrix.service }}"
+          aws ecr describe-repositories --repository-names "$REPO" --region "$AWS_REGION" >/dev/null 2>&1 ||
+          aws ecr create-repository --repository-name "$REPO" --image-scanning-configuration scanOnPush=true --region "$AWS_REGION"
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Image
+        run: |
+          set -e
+          IMAGE="${ECR_REGISTRY}/${{ env.APP_NAME_LOWER }}-${{ env.ENVIRONMENT }}-${{ matrix.service }}"
+          echo "IMAGE=${IMAGE}" >> "$GITHUB_ENV"
+          if [ "${{ matrix.service }}" = "frontend" ]; then
+            EXTRA_ARGS="--build-arg VITE_API_GATEWAY_URL=/api"
+          else
+            EXTRA_ARGS=""
+          fi
+          docker build \
+            $EXTRA_ARGS \
+            --tag "${IMAGE}:${IMAGE_TAG}" \
+            --tag "${IMAGE}:latest" \
+            ./gourmet-flow/apps/${{ matrix.service }}
+
+      - name: Validate Non-Root Image
+        run: |
+          set -e
+          USER=$(docker inspect --format '{{.Config.User}}' "${IMAGE}:${IMAGE_TAG}")
+          echo "Validating ${{ matrix.service }}: image user = '${USER}' (expect non-empty, non-root)"
+          if [ -z "$USER" ] || [ "$USER" = "root" ] || [ "$USER" = "0:0" ] || [ "$USER" = "0" ]; then
+            echo "SECURITY GATE FAILED: ${{ matrix.service }} image runs as root (user='${USER}'). Refusing to push."
+            exit 1
+          fi
+
+      - name: Setup Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          version: latest
+
+      - name: Trivy Scan Image
+        run: |
+          set +e
+          trivy image --format table --severity HIGH,CRITICAL --output trivy-${{ matrix.service }}.txt "${IMAGE}:${IMAGE_TAG}"
+          echo "Trivy exit code: $?"
+          exit 0
+
+      - name: Upload Trivy Image Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-${{ matrix.service }}.txt
+          path: trivy-${{ matrix.service }}.txt
+          if-no-files-found: ignore
+
+      - name: Push Image
+        run: |
+          set -e
+          docker push "${IMAGE}:${IMAGE_TAG}"
+          docker push "${IMAGE}:latest"
+
+  update-helm:
+    name: Update Helm Image Tags
+    needs: build-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup yq
+        uses: mikefarah/yq@v4.44.3
+
+      - name: Update Helm Image Tags
+        working-directory: gourmet-flow
+        run: |
+          set -e
+
+          test -f "$VALUES_FILE" || {
+            echo "ERROR: $VALUES_FILE not found"
+            exit 1
+          }
+
+          echo "Updating Helm image tags to ${IMAGE_TAG}"
+
+          yq -i '.services.apiGateway.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+          yq -i '.services.authService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+          yq -i '.services.userService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+          yq -i '.services.restaurantService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+          yq -i '.services.menuService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+          yq -i '.services.cartService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+          yq -i '.services.orderService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+          yq -i '.services.paymentService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+          yq -i '.services.deliveryService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+          yq -i '.services.frontend.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+
+          echo "--- Updated Helm image values ---"
+          yq '.services.*.image' "$VALUES_FILE"
+
+          git config user.name "GitHub Actions CI"
+          git config user.email "actions@grabmyfood.local"
+          git add "$VALUES_FILE"
+
+          if git diff --cached --quiet; then
+            echo "No Helm values changes detected."
+            exit 0
+          fi
+
+          git commit -m "chore(gitops): deploy build ${IMAGE_TAG} [skip ci]"
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/lekymAnisem/GrabMyFood.git" HEAD:main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
