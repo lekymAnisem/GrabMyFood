@@ -35,8 +35,6 @@ pipeline {
         SONAR_SERVER  = 'Sonarserver'
         SONAR_TOOL    = 'SonarQube'
 
-        SNYK_TOKEN    = credentials('snyk-token')
-        NVD_API_KEY   = credentials('nvd-api-key')
     }
 
     stages {
