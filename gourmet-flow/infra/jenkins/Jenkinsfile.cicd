@@ -33,7 +33,6 @@ pipeline {
         VALUES_FILE   = 'gourmet-flow/infra/helm/gourmet-flow/values.yaml'
 
         SONAR_SERVER  = 'Sonarserver'
-        SONAR_TOOL    = 'SonarQube'
     }
 
     stages {
@@ -168,25 +167,25 @@ pipeline {
 
         stage('SonarQube Backend Analysis') {
             steps {
-                script {
-                    def scannerHome = tool(
-                        name: env.SONAR_TOOL,
-                        type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-                    )
-                    withSonarQubeEnv(env.SONAR_SERVER) {
-                        sh """
-                            set -e
-                            echo "SonarScanner: \${scannerHome}"
-                            cd gourmet-flow
+                withSonarQubeEnv(env.SONAR_SERVER) {
+                    sh '''
+                        set -e
+                        cd gourmet-flow
 
-                            "\${scannerHome}/bin/sonar-scanner" \
-                                -Dsonar.projectKey=gourmet-flow-backend \
-                                -Dsonar.projectName="Gourmet Flow Backend" \
-                                -Dsonar.sources=apps \
-                                -Dsonar.sourceEncoding=UTF-8 \
-                                -Dsonar.exclusions="apps/frontend/**,node_modules/**,dist/**,coverage/**"
-                        """
-                    }
+                        if ! command -v sonar-scanner >/dev/null 2>&1; then
+                            echo "Downloading sonar-scanner locally..."
+                            curl -sS https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip -o sonar-scanner.zip
+                            unzip -q sonar-scanner.zip
+                            export PATH="$PWD/sonar-scanner-6.2.1.4610-linux-x64/bin:$PATH"
+                        fi
+
+                        sonar-scanner \
+                            -Dsonar.projectKey=gourmet-flow-backend \
+                            -Dsonar.projectName="Gourmet Flow Backend" \
+                            -Dsonar.sources=apps \
+                            -Dsonar.sourceEncoding=UTF-8 \
+                            -Dsonar.exclusions="apps/frontend/**,node_modules/**,dist/**,coverage/**"
+                    '''
                 }
             }
         }
@@ -208,25 +207,22 @@ pipeline {
 
         stage('SonarQube Frontend Analysis') {
             steps {
-                script {
-                    def scannerHome = tool(
-                        name: env.SONAR_TOOL,
-                        type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-                    )
-                    withSonarQubeEnv(env.SONAR_SERVER) {
-                        sh """
-                            set -e
-                            echo "SonarScanner: \${scannerHome}"
-                            cd gourmet-flow
+                withSonarQubeEnv(env.SONAR_SERVER) {
+                    sh '''
+                        set -e
+                        cd gourmet-flow
 
-                            "\${scannerHome}/bin/sonar-scanner" \
-                                -Dsonar.projectKey=gourmet-flow-frontend \
-                                -Dsonar.projectName="Gourmet Flow Frontend" \
-                                -Dsonar.sources=apps/frontend/src \
-                                -Dsonar.sourceEncoding=UTF-8 \
-                                -Dsonar.exclusions="node_modules/**,dist/**,coverage/**"
-                        """
-                    }
+                        if ! command -v sonar-scanner >/dev/null 2>&1; then
+                            export PATH="$PWD/sonar-scanner-6.2.1.4610-linux-x64/bin:$PATH"
+                        fi
+
+                        sonar-scanner \
+                            -Dsonar.projectKey=gourmet-flow-frontend \
+                            -Dsonar.projectName="Gourmet Flow Frontend" \
+                            -Dsonar.sources=apps/frontend/src \
+                            -Dsonar.sourceEncoding=UTF-8 \
+                            -Dsonar.exclusions="node_modules/**,dist/**,coverage/**"
+                    '''
                 }
             }
         }
@@ -327,7 +323,6 @@ pipeline {
                 buildServiceImage('apps/payment-service', "${ECR_PAYMENT_SERVICE}")
                 buildServiceImage('apps/delivery-service', "${ECR_DELIVERY_SERVICE}")
                 
-                // Build Frontend with Vite API arg
                 sh '''
                     set -e
                     IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND}"
@@ -441,6 +436,7 @@ pipeline {
                                 /^      tag:/ {
                                     print "      tag: " q tag q
                                     next
+                                }
                                 { print }
                             ' "$VALUES_FILE" > "${VALUES_FILE}.tmp"
                             mv "${VALUES_FILE}.tmp" "$VALUES_FILE"
