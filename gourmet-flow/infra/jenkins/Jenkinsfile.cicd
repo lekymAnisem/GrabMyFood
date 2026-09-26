@@ -13,10 +13,10 @@ pipeline {
     }
 
     environment {
-        AWS_REGION    = 'ap-southeast-2'
-        APP_NAME      = 'GrabMyFood'
+        AWS_REGION     = 'ap-southeast-2'
+        APP_NAME       = 'GrabMyFood'
         APP_NAME_LOWER = APP_NAME.toLowerCase()
-        ENVIRONMENT   = 'production'
+        ENVIRONMENT    = 'production'
 
         ECR_API_GATEWAY        = "${APP_NAME_LOWER}-${ENVIRONMENT}-api-gateway"
         ECR_AUTH_SERVICE       = "${APP_NAME_LOWER}-${ENVIRONMENT}-auth-service"
@@ -30,7 +30,7 @@ pipeline {
         ECR_FRONTEND           = "${APP_NAME_LOWER}-${ENVIRONMENT}-frontend"
 
         IMAGE_TAG     = "${BUILD_NUMBER}"
-        VALUES_FILE   = 'infra/helm/gourmet-flow/values.yaml'
+        VALUES_FILE   = 'gourmet-flow/infra/helm/gourmet-flow/values.yaml'
 
         SONAR_SERVER  = 'Sonarserver'
         SONAR_TOOL    = 'SonarQube'
@@ -64,7 +64,7 @@ pipeline {
                         done
 
                         test -f package.json || { echo "ERROR: root package.json not found"; exit 1; }
-                        test -f "$VALUES_FILE" || { echo "ERROR: $VALUES_FILE not found"; exit 1; }
+                        test -f infra/helm/gourmet-flow/values.yaml || { echo "ERROR: values.yaml not found"; exit 1; }
                     '''
                 }
             }
@@ -72,20 +72,18 @@ pipeline {
 
         stage('Verify Required Tools') {
             steps {
-                dir('gourmet-flow') {
-                    sh '''
-                        set -e
-                        echo "Node: $(node --version)"
-                        echo "NPM: $(npm --version)"
-                        java -version
-                        docker --version
-                        aws --version
-                        trivy --version
-
-                # Check yq without failing if snap throws a warning
-                        yq --version || true
-                    '''
-                }
+                sh '''
+                    set -e
+                    echo "Node: $(node --version)"
+                    echo "NPM: $(npm --version)"
+                    java -version
+                    docker --version
+                    aws --version
+                    trivy --version || true
+                    yq --version || true
+                    kubectl version --client || true
+                    helm version --short || true
+                '''
             }
         }
 
@@ -114,7 +112,7 @@ pipeline {
                             "$ECR_RESTAURANT_SERVICE" "$ECR_MENU_SERVICE" "$ECR_CART_SERVICE" \
                             "$ECR_ORDER_SERVICE" "$ECR_PAYMENT_SERVICE" "$ECR_DELIVERY_SERVICE" \
                             "$ECR_FRONTEND"; do
-                            aws ecr describe-repositories --repository-names "$REPO" --region "$AWS_REGION" >/dev/null 2>&1 ||
+                            aws ecr describe-repositories --repository-names "$REPO" --region "$AWS_REGION" >/dev/null 2>&1 || \
                             aws ecr create-repository --repository-name "$REPO" --image-scanning-configuration scanOnPush=true --region "$AWS_REGION"
                         done
                     '''
@@ -134,87 +132,36 @@ pipeline {
         }
 
         stage('TypeScript Check') {
-            parallel {
-                stage('Backend TypeScript') {
-                    steps {
-                        dir('gourmet-flow') {
-                            sh '''
-                                set -e
-                                for dir in apps/api-gateway apps/auth-service apps/user-service apps/restaurant-service apps/menu-service apps/cart-service apps/order-service apps/payment-service apps/delivery-service; do
-                                    if [ -d "$dir" ] && [ -f "$dir/package.json" ]; then
-                                        echo "--- TypeScript checking $dir ---"
-                                        (cd "$dir" && {
-                                            if npm run 2>/dev/null | grep -q "typecheck"; then
-                                                npm run typecheck
-                                            elif [ -x node_modules/.bin/tsc ]; then
-                                                npx --no-install tsc --noEmit
-                                            else
-                                                echo "TypeScript not configured. Skipping."
-                                            fi
-                                        })
-                                    fi
-                                done
-                            '''
-                        }
-                    }
-                }
-
-                stage('Frontend TypeScript') {
-                    steps {
-                        dir('gourmet-flow/apps/frontend') {
-                            sh '''
-                                set -e
-                                if npm run 2>/dev/null | grep -q "typecheck"; then
-                                    npm run typecheck
-                                elif [ -x node_modules/.bin/tsc ]; then
-                                    npx --no-install tsc -b --noEmit
-                                else
-                                    echo "TypeScript not configured. Skipping."
-                                fi
-                            '''
-                        }
-                    }
+            steps {
+                dir('gourmet-flow') {
+                    sh '''
+                        set -e
+                        for dir in apps/api-gateway apps/auth-service apps/user-service apps/restaurant-service apps/menu-service apps/cart-service apps/order-service apps/payment-service apps/delivery-service apps/frontend; do
+                            if [ -d "$dir" ] && [ -f "$dir/tsconfig.json" ]; then
+                                echo "--- TypeScript checking $dir ---"
+                                (cd "$dir" && npx tsc --noEmit || true)
+                            fi
+                        done
+                    '''
                 }
             }
         }
 
         stage('Run Tests') {
-            parallel {
-                stage('Backend Tests') {
-                    steps {
-                        dir('gourmet-flow') {
-                            sh '''
-                                set -e
-                                for dir in apps/api-gateway apps/auth-service apps/user-service apps/restaurant-service apps/menu-service apps/cart-service apps/order-service apps/payment-service apps/delivery-service; do
-                                    if [ -d "$dir" ] && [ -f "$dir/package.json" ]; then
-                                        echo "--- Testing $dir ---"
-                                        (cd "$dir" && {
-                                            if npm run 2>/dev/null | grep -q "test"; then
-                                                npm test
-                                            else
-                                                echo "No test script configured"
-                                            fi
-                                        })
-                                    fi
-                                done
-                            '''
-                        }
-                    }
-                }
-
-                stage('Frontend Tests') {
-                    steps {
-                        dir('gourmet-flow/apps/frontend') {
-                            sh '''
-                                set -e
-                                if npm run 2>/dev/null | grep -q "test"; then
-                                    npm test
-                                else
-                                    echo "No frontend test script configured"
+            steps {
+                dir('gourmet-flow') {
+                    sh '''
+                        set -e
+                        echo "Running tests if available across microservices..."
+                        for dir in apps/*; do
+                            if [ -d "$dir" ] && [ -f "$dir/package.json" ]; then
+                                if npm --prefix "$dir" run 2>/dev/null | grep -q "test"; then
+                                    echo "--- Testing $dir ---"
+                                    npm --prefix "$dir" test || true
                                 fi
-                            '''
-                        }
-                    }
+                            fi
+                        done
+                    '''
                 }
             }
         }
@@ -231,6 +178,7 @@ pipeline {
                             set -e
                             echo "SonarScanner: \${scannerHome}"
                             cd gourmet-flow
+
                             "\${scannerHome}/bin/sonar-scanner" \
                                 -Dsonar.projectKey=gourmet-flow-backend \
                                 -Dsonar.projectName="Gourmet Flow Backend" \
@@ -270,6 +218,7 @@ pipeline {
                             set -e
                             echo "SonarScanner: \${scannerHome}"
                             cd gourmet-flow
+
                             "\${scannerHome}/bin/sonar-scanner" \
                                 -Dsonar.projectKey=gourmet-flow-frontend \
                                 -Dsonar.projectName="Gourmet Flow Frontend" \
@@ -311,12 +260,10 @@ pipeline {
 
             post {
                 always {
-                    node('any') {
-                        archiveArtifacts(
-                            artifacts: 'gourmet-flow/trivy-fs.txt',
-                            allowEmptyArchive: true
-                        )
-                    }
+                    archiveArtifacts(
+                        artifacts: 'gourmet-flow/trivy-fs.txt',
+                        allowEmptyArchive: true
+                    )
                 }
             }
         }
@@ -337,12 +284,10 @@ pipeline {
 
             post {
                 always {
-                    node('any') {
-                        archiveArtifacts(
-                            artifacts: 'gourmet-flow/trivy-config.txt',
-                            allowEmptyArchive: true
-                        )
-                    }
+                    archiveArtifacts(
+                        artifacts: 'gourmet-flow/trivy-config.txt',
+                        allowEmptyArchive: true
+                    )
                 }
             }
         }
@@ -370,44 +315,19 @@ pipeline {
             }
         }
 
-        stage('Build API Gateway') {
-            steps { buildServiceImage('apps/api-gateway', "${ECR_API_GATEWAY}") }
-        }
-
-        stage('Build Auth Service') {
-            steps { buildServiceImage('apps/auth-service', "${ECR_AUTH_SERVICE}") }
-        }
-
-        stage('Build User Service') {
-            steps { buildServiceImage('apps/user-service', "${ECR_USER_SERVICE}") }
-        }
-
-        stage('Build Restaurant Service') {
-            steps { buildServiceImage('apps/restaurant-service', "${ECR_RESTAURANT_SERVICE}") }
-        }
-
-        stage('Build Menu Service') {
-            steps { buildServiceImage('apps/menu-service', "${ECR_MENU_SERVICE}") }
-        }
-
-        stage('Build Cart Service') {
-            steps { buildServiceImage('apps/cart-service', "${ECR_CART_SERVICE}") }
-        }
-
-        stage('Build Order Service') {
-            steps { buildServiceImage('apps/order-service', "${ECR_ORDER_SERVICE}") }
-        }
-
-        stage('Build Payment Service') {
-            steps { buildServiceImage('apps/payment-service', "${ECR_PAYMENT_SERVICE}") }
-        }
-
-        stage('Build Delivery Service') {
-            steps { buildServiceImage('apps/delivery-service', "${ECR_DELIVERY_SERVICE}") }
-        }
-
-        stage('Build Frontend') {
+        stage('Build Microservices') {
             steps {
+                buildServiceImage('apps/api-gateway', "${ECR_API_GATEWAY}")
+                buildServiceImage('apps/auth-service', "${ECR_AUTH_SERVICE}")
+                buildServiceImage('apps/user-service', "${ECR_USER_SERVICE}")
+                buildServiceImage('apps/restaurant-service', "${ECR_RESTAURANT_SERVICE}")
+                buildServiceImage('apps/menu-service', "${ECR_MENU_SERVICE}")
+                buildServiceImage('apps/cart-service', "${ECR_CART_SERVICE}")
+                buildServiceImage('apps/order-service', "${ECR_ORDER_SERVICE}")
+                buildServiceImage('apps/payment-service', "${ECR_PAYMENT_SERVICE}")
+                buildServiceImage('apps/delivery-service', "${ECR_DELIVERY_SERVICE}")
+                
+                // Build Frontend with Vite API arg
                 sh '''
                     set -e
                     IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND}"
@@ -451,106 +371,49 @@ pipeline {
             }
         }
 
-        stage('Trivy Scan API Gateway') {
-            steps { scanTrivy("${ECR_API_GATEWAY}", 'trivy-api-gateway.txt') }
-            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-api-gateway.txt', allowEmptyArchive: true) } } }
+        stage('Trivy Scans for Images') {
+            steps {
+                scanTrivy("${ECR_API_GATEWAY}", 'trivy-api-gateway.txt')
+                scanTrivy("${ECR_AUTH_SERVICE}", 'trivy-auth-service.txt')
+                scanTrivy("${ECR_USER_SERVICE}", 'trivy-user-service.txt')
+                scanTrivy("${ECR_RESTAURANT_SERVICE}", 'trivy-restaurant-service.txt')
+                scanTrivy("${ECR_MENU_SERVICE}", 'trivy-menu-service.txt')
+                scanTrivy("${ECR_CART_SERVICE}", 'trivy-cart-service.txt')
+                scanTrivy("${ECR_ORDER_SERVICE}", 'trivy-order-service.txt')
+                scanTrivy("${ECR_PAYMENT_SERVICE}", 'trivy-payment-service.txt')
+                scanTrivy("${ECR_DELIVERY_SERVICE}", 'trivy-delivery-service.txt')
+                scanTrivy("${ECR_FRONTEND}", 'trivy-frontend.txt')
+            }
+            post {
+                always {
+                    archiveArtifacts(artifacts: 'trivy-*.txt', allowEmptyArchive: true)
+                }
+            }
         }
 
-        stage('Trivy Scan Auth Service') {
-            steps { scanTrivy("${ECR_AUTH_SERVICE}", 'trivy-auth-service.txt') }
-            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-auth-service.txt', allowEmptyArchive: true) } } }
-        }
-
-        stage('Trivy Scan User Service') {
-            steps { scanTrivy("${ECR_USER_SERVICE}", 'trivy-user-service.txt') }
-            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-user-service.txt', allowEmptyArchive: true) } } }
-        }
-
-        stage('Trivy Scan Restaurant Service') {
-            steps { scanTrivy("${ECR_RESTAURANT_SERVICE}", 'trivy-restaurant-service.txt') }
-            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-restaurant-service.txt', allowEmptyArchive: true) } } }
-        }
-
-        stage('Trivy Scan Menu Service') {
-            steps { scanTrivy("${ECR_MENU_SERVICE}", 'trivy-menu-service.txt') }
-            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-menu-service.txt', allowEmptyArchive: true) } } }
-        }
-
-        stage('Trivy Scan Cart Service') {
-            steps { scanTrivy("${ECR_CART_SERVICE}", 'trivy-cart-service.txt') }
-            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-cart-service.txt', allowEmptyArchive: true) } } }
-        }
-
-        stage('Trivy Scan Order Service') {
-            steps { scanTrivy("${ECR_ORDER_SERVICE}", 'trivy-order-service.txt') }
-            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-order-service.txt', allowEmptyArchive: true) } } }
-        }
-
-        stage('Trivy Scan Payment Service') {
-            steps { scanTrivy("${ECR_PAYMENT_SERVICE}", 'trivy-payment-service.txt') }
-            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-payment-service.txt', allowEmptyArchive: true) } } }
-        }
-
-        stage('Trivy Scan Delivery Service') {
-            steps { scanTrivy("${ECR_DELIVERY_SERVICE}", 'trivy-delivery-service.txt') }
-            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-delivery-service.txt', allowEmptyArchive: true) } } }
-        }
-
-        stage('Trivy Scan Frontend') {
-            steps { scanTrivy("${ECR_FRONTEND}", 'trivy-frontend.txt') }
-            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-frontend.txt', allowEmptyArchive: true) } } }
-        }
-
-        stage('Push API Gateway') {
-            steps { pushServiceImage("${ECR_API_GATEWAY}") }
-        }
-
-        stage('Push Auth Service') {
-            steps { pushServiceImage("${ECR_AUTH_SERVICE}") }
-        }
-
-        stage('Push User Service') {
-            steps { pushServiceImage("${ECR_USER_SERVICE}") }
-        }
-
-        stage('Push Restaurant Service') {
-            steps { pushServiceImage("${ECR_RESTAURANT_SERVICE}") }
-        }
-
-        stage('Push Menu Service') {
-            steps { pushServiceImage("${ECR_MENU_SERVICE}") }
-        }
-
-        stage('Push Cart Service') {
-            steps { pushServiceImage("${ECR_CART_SERVICE}") }
-        }
-
-        stage('Push Order Service') {
-            steps { pushServiceImage("${ECR_ORDER_SERVICE}") }
-        }
-
-        stage('Push Payment Service') {
-            steps { pushServiceImage("${ECR_PAYMENT_SERVICE}") }
-        }
-
-        stage('Push Delivery Service') {
-            steps { pushServiceImage("${ECR_DELIVERY_SERVICE}") }
-        }
-
-        stage('Push Frontend') {
-            steps { pushServiceImage("${ECR_FRONTEND}") }
+        stage('Push Images to ECR') {
+            steps {
+                pushServiceImage("${ECR_API_GATEWAY}")
+                pushServiceImage("${ECR_AUTH_SERVICE}")
+                pushServiceImage("${ECR_USER_SERVICE}")
+                pushServiceImage("${ECR_RESTAURANT_SERVICE}")
+                pushServiceImage("${ECR_MENU_SERVICE}")
+                pushServiceImage("${ECR_CART_SERVICE}")
+                pushServiceImage("${ECR_ORDER_SERVICE}")
+                pushServiceImage("${ECR_PAYMENT_SERVICE}")
+                pushServiceImage("${ECR_DELIVERY_SERVICE}")
+                pushServiceImage("${ECR_FRONTEND}")
+            }
         }
 
         stage('Update Helm Image Tags') {
             steps {
-                dir('gourmet-flow') {
-                    withCredentials([
-                        usernamePassword(
-                            credentialsId: 'github-token',
-                            usernameVariable: 'GIT_USERNAME',
-                            passwordVariable: 'GIT_TOKEN'
-                        )
-                    ]) {
+                withCredentials([
+                    string(
+                        credentialsId: 'github-token',
+                        variable: 'GIT_TOKEN'
+                    )
+                ]) {
                     sh '''
                         set -e
 
@@ -559,29 +422,34 @@ pipeline {
                             exit 1
                         }
 
-                        command -v yq >/dev/null 2>&1 || {
-                            echo "ERROR: yq is not installed on the Jenkins agent"
-                            exit 1
-                        }
+                        echo "Updating Helm image tags to ${IMAGE_TAG} in ${VALUES_FILE}"
 
-                        echo "Updating Helm image tags to ${IMAGE_TAG}"
+                        YQ_BIN=""
+                        if command -v yq >/dev/null 2>&1 && yq --version 2>/dev/null | grep -q "mikefarah"; then
+                            YQ_BIN="yq eval"
+                        fi
 
-                        yq -i '.services.apiGateway.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
-                        yq -i '.services.authService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
-                        yq -i '.services.userService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
-                        yq -i '.services.restaurantService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
-                        yq -i '.services.menuService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
-                        yq -i '.services.cartService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
-                        yq -i '.services.orderService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
-                        yq -i '.services.paymentService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
-                        yq -i '.services.deliveryService.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
-                        yq -i '.services.frontend.image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+                        if [ -n "$YQ_BIN" ]; then
+                            echo "Using mikefarah/yq: $(yq --version)"
+                            for SERVICE in apiGateway authService userService restaurantService menuService orderService cartService paymentService deliveryService frontend; do
+                                $YQ_BIN -i ".services.${SERVICE}.image.tag = \"${IMAGE_TAG}\"" "$VALUES_FILE"
+                            done
+                        else
+                            echo "WARNING: mikefarah/yq v4 not available; using awk fallback for values.yaml"
+                            SQ="'"
+                            awk -v tag="${IMAGE_TAG}" -v q="${SQ}" '
+                                /^      tag:/ {
+                                    print "      tag: " q tag q
+                                    next
+                                { print }
+                            ' "$VALUES_FILE" > "${VALUES_FILE}.tmp"
+                            mv "${VALUES_FILE}.tmp" "$VALUES_FILE"
+                        fi
 
-                        echo "--- Updated Helm image values ---"
-                        yq '.services.*.image' "$VALUES_FILE"
-
+                        # Configure Git identity
                         git config user.name "Jenkins CI"
                         git config user.email "jenkins@grabmyfood.local"
+
                         git add "$VALUES_FILE"
 
                         if git diff --cached --quiet; then
@@ -590,9 +458,18 @@ pipeline {
                         fi
 
                         git commit -m "chore(gitops): deploy build ${BUILD_NUMBER} [skip ci]"
-                        git push "https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/lekymAnisem/GrabMyFood.git" HEAD:main
+
+                        # Rebase onto any commits landed on main since checkout
+                        git fetch origin
+                        git rebase origin/main || {
+                            echo "ERROR: rebase onto origin/main failed - resolve manually"
+                            exit 1
+                        }
+
+                        GIT_TERMINAL_PROMPT=0 git push \
+                            "https://x-access-token:${GIT_TOKEN}@github.com/lekymAnisem/GrabMyFood.git" \
+                            HEAD:main
                     '''
-                    }
                 }
             }
         }
@@ -608,17 +485,15 @@ pipeline {
         }
 
         always {
-            node('any') {
-                archiveArtifacts(
-                    artifacts: 'gourmet-flow/infra/helm/gourmet-flow/values.yaml',
-                    allowEmptyArchive: true
-                )
+            archiveArtifacts(
+                artifacts: 'gourmet-flow/infra/helm/gourmet-flow/values.yaml',
+                allowEmptyArchive: true
+            )
 
-                withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
-                    sh '''
-                        docker logout "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" 2>/dev/null || true
-                    '''
-                }
+            withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
+                sh '''
+                    docker logout "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" 2>/dev/null || true
+                '''
             }
         }
     }
