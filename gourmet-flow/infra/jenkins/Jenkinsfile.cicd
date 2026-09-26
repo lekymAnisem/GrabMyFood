@@ -34,7 +34,6 @@ pipeline {
 
         SONAR_SERVER  = 'Sonarserver'
         SONAR_TOOL    = 'SonarQube'
-
     }
 
     stages {
@@ -82,7 +81,6 @@ pipeline {
                         docker --version
                         aws --version
                         trivy --version
-                        dependency-check --version
                         snyk --version
                         yq --version
                     '''
@@ -220,10 +218,6 @@ pipeline {
             }
         }
 
-        /*
-         * SonarQube scans run sequentially to avoid
-         * waitForQualityGate() associating with the wrong task.
-         */
         stage('SonarQube Backend Analysis') {
             steps {
                 script {
@@ -234,12 +228,9 @@ pipeline {
                     withSonarQubeEnv(env.SONAR_SERVER) {
                         sh """
                             set -e
-
-                            echo "SonarScanner: ${scannerHome}"
-
+                            echo "SonarScanner: \${scannerHome}"
                             cd gourmet-flow
-
-                            "${scannerHome}/bin/sonar-scanner" \
+                            "\${scannerHome}/bin/sonar-scanner" \
                                 -Dsonar.projectKey=gourmet-flow-backend \
                                 -Dsonar.projectName="Gourmet Flow Backend" \
                                 -Dsonar.sources=apps \
@@ -276,12 +267,9 @@ pipeline {
                     withSonarQubeEnv(env.SONAR_SERVER) {
                         sh """
                             set -e
-
-                            echo "SonarScanner: ${scannerHome}"
-
+                            echo "SonarScanner: \${scannerHome}"
                             cd gourmet-flow
-
-                            "${scannerHome}/bin/sonar-scanner" \
+                            "\${scannerHome}/bin/sonar-scanner" \
                                 -Dsonar.projectKey=gourmet-flow-frontend \
                                 -Dsonar.projectName="Gourmet Flow Frontend" \
                                 -Dsonar.sources=apps/frontend/src \
@@ -308,7 +296,6 @@ pipeline {
             }
         }
 
-
         stage('Trivy File System Scan') {
             steps {
                 dir('gourmet-flow') {
@@ -323,10 +310,12 @@ pipeline {
 
             post {
                 always {
-                    archiveArtifacts(
-                        artifacts: 'gourmet-flow/trivy-fs.txt',
-                        allowEmptyArchive: true
-                    )
+                    node {
+                        archiveArtifacts(
+                            artifacts: 'gourmet-flow/trivy-fs.txt',
+                            allowEmptyArchive: true
+                        )
+                    }
                 }
             }
         }
@@ -347,10 +336,12 @@ pipeline {
 
             post {
                 always {
-                    archiveArtifacts(
-                        artifacts: 'gourmet-flow/trivy-config.txt',
-                        allowEmptyArchive: true
-                    )
+                    node {
+                        archiveArtifacts(
+                            artifacts: 'gourmet-flow/trivy-config.txt',
+                            allowEmptyArchive: true
+                        )
+                    }
                 }
             }
         }
@@ -461,52 +452,52 @@ pipeline {
 
         stage('Trivy Scan API Gateway') {
             steps { scanTrivy("${ECR_API_GATEWAY}", 'trivy-api-gateway.txt') }
-            post { always { archiveArtifacts(artifacts: 'trivy-api-gateway.txt', allowEmptyArchive: true) } }
+            post { always { node { archiveArtifacts(artifacts: 'trivy-api-gateway.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan Auth Service') {
             steps { scanTrivy("${ECR_AUTH_SERVICE}", 'trivy-auth-service.txt') }
-            post { always { archiveArtifacts(artifacts: 'trivy-auth-service.txt', allowEmptyArchive: true) } }
+            post { always { node { archiveArtifacts(artifacts: 'trivy-auth-service.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan User Service') {
             steps { scanTrivy("${ECR_USER_SERVICE}", 'trivy-user-service.txt') }
-            post { always { archiveArtifacts(artifacts: 'trivy-user-service.txt', allowEmptyArchive: true) } }
+            post { always { node { archiveArtifacts(artifacts: 'trivy-user-service.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan Restaurant Service') {
             steps { scanTrivy("${ECR_RESTAURANT_SERVICE}", 'trivy-restaurant-service.txt') }
-            post { always { archiveArtifacts(artifacts: 'trivy-restaurant-service.txt', allowEmptyArchive: true) } }
+            post { always { node { archiveArtifacts(artifacts: 'trivy-restaurant-service.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan Menu Service') {
             steps { scanTrivy("${ECR_MENU_SERVICE}", 'trivy-menu-service.txt') }
-            post { always { archiveArtifacts(artifacts: 'trivy-menu-service.txt', allowEmptyArchive: true) } }
+            post { always { node { archiveArtifacts(artifacts: 'trivy-menu-service.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan Cart Service') {
             steps { scanTrivy("${ECR_CART_SERVICE}", 'trivy-cart-service.txt') }
-            post { always { archiveArtifacts(artifacts: 'trivy-cart-service.txt', allowEmptyArchive: true) } }
+            post { always { node { archiveArtifacts(artifacts: 'trivy-cart-service.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan Order Service') {
             steps { scanTrivy("${ECR_ORDER_SERVICE}", 'trivy-order-service.txt') }
-            post { always { archiveArtifacts(artifacts: 'trivy-order-service.txt', allowEmptyArchive: true) } }
+            post { always { node { archiveArtifacts(artifacts: 'trivy-order-service.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan Payment Service') {
             steps { scanTrivy("${ECR_PAYMENT_SERVICE}", 'trivy-payment-service.txt') }
-            post { always { archiveArtifacts(artifacts: 'trivy-payment-service.txt', allowEmptyArchive: true) } }
+            post { always { node { archiveArtifacts(artifacts: 'trivy-payment-service.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan Delivery Service') {
             steps { scanTrivy("${ECR_DELIVERY_SERVICE}", 'trivy-delivery-service.txt') }
-            post { always { archiveArtifacts(artifacts: 'trivy-delivery-service.txt', allowEmptyArchive: true) } }
+            post { always { node { archiveArtifacts(artifacts: 'trivy-delivery-service.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan Frontend') {
             steps { scanTrivy("${ECR_FRONTEND}", 'trivy-frontend.txt') }
-            post { always { archiveArtifacts(artifacts: 'trivy-frontend.txt', allowEmptyArchive: true) } }
+            post { always { node { archiveArtifacts(artifacts: 'trivy-frontend.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Push API Gateway') {
@@ -616,15 +607,17 @@ pipeline {
         }
 
         always {
-            archiveArtifacts(
-                artifacts: 'gourmet-flow/infra/helm/gourmet-flow/values.yaml',
-                allowEmptyArchive: true
-            )
+            node {
+                archiveArtifacts(
+                    artifacts: 'gourmet-flow/infra/helm/gourmet-flow/values.yaml',
+                    allowEmptyArchive: true
+                )
 
-            withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
-                sh '''
-                    docker logout "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" 2>/dev/null || true
-                '''
+                withAWS(credentials: 'aws-creds', region: 'ap-southeast-2') {
+                    sh '''
+                        docker logout "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" 2>/dev/null || true
+                    '''
+                }
             }
         }
     }
