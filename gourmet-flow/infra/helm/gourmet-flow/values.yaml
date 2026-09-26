@@ -54,7 +54,7 @@ services:
       port: 4000
       targetPort: 4000
     image:
-      repository: grabmyfood-production-api-gateway
+      repository: 218619602282.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-api-gateway
       tag: '13'
       pullPolicy: IfNotPresent
     envVars:
@@ -93,7 +93,7 @@ services:
       port: 4001
       targetPort: 4001
     image:
-      repository: grabmyfood-production-auth-service
+      repository: 218619602282.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-auth-service
       tag: '13'
       pullPolicy: IfNotPresent
     envVars:
@@ -132,7 +132,7 @@ services:
       port: 4002
       targetPort: 4002
     image:
-      repository: grabmyfood-production-user-service
+      repository: 218619602282.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-user-service
       tag: '13'
       pullPolicy: IfNotPresent
     envVars:
@@ -171,7 +171,7 @@ services:
       port: 4003
       targetPort: 4003
     image:
-      repository: grabmyfood-production-restaurant-service
+      repository: 218619602282.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-restaurant-service
       tag: '13'
       pullPolicy: IfNotPresent
     envVars:
@@ -210,7 +210,7 @@ services:
       port: 4004
       targetPort: 4004
     image:
-      repository: grabmyfood-production-menu-service
+      repository: 218619602282.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-menu-service
       tag: '13'
       pullPolicy: IfNotPresent
     envVars:
@@ -249,7 +249,7 @@ services:
       port: 4005
       targetPort: 4005
     image:
-      repository: grabmyfood-production-cart-service
+      repository: 218619602282.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-cart-service
       tag: '13'
       pullPolicy: IfNotPresent
     envVars:
@@ -288,7 +288,7 @@ services:
       port: 4006
       targetPort: 4006
     image:
-      repository: grabmyfood-production-order-service
+      repository: 218619602282.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-order-service
       tag: '13'
       pullPolicy: IfNotPresent
     envVars:
@@ -327,7 +327,7 @@ services:
       port: 4007
       targetPort: 4007
     image:
-      repository: grabmyfood-production-payment-service
+      repository: 218619602282.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-payment-service
       tag: '13'
       pullPolicy: IfNotPresent
     envVars:
@@ -366,7 +366,7 @@ services:
       port: 4008
       targetPort: 4008
     image:
-      repository: grabmyfood-production-delivery-service
+      repository: 218619602282.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-delivery-service
       tag: '13'
       pullPolicy: IfNotPresent
     envVars:
@@ -406,7 +406,7 @@ services:
       port: 80
       targetPort: 8080
     image:
-      repository: grabmyfood-production-frontend
+      repository: 218619602282.dkr.ecr.ap-southeast-2.amazonaws.com/grabmyfood-production-frontend
       tag: '13'
       pullPolicy: IfNotPresent
     envVars: {}
