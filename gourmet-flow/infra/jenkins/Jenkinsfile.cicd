@@ -310,7 +310,7 @@ pipeline {
 
             post {
                 always {
-                    node {
+                    node('any') {
                         archiveArtifacts(
                             artifacts: 'gourmet-flow/trivy-fs.txt',
                             allowEmptyArchive: true
@@ -336,7 +336,7 @@ pipeline {
 
             post {
                 always {
-                    node {
+                    node('any') {
                         archiveArtifacts(
                             artifacts: 'gourmet-flow/trivy-config.txt',
                             allowEmptyArchive: true
@@ -452,52 +452,52 @@ pipeline {
 
         stage('Trivy Scan API Gateway') {
             steps { scanTrivy("${ECR_API_GATEWAY}", 'trivy-api-gateway.txt') }
-            post { always { node { archiveArtifacts(artifacts: 'trivy-api-gateway.txt', allowEmptyArchive: true) } } }
+            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-api-gateway.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan Auth Service') {
             steps { scanTrivy("${ECR_AUTH_SERVICE}", 'trivy-auth-service.txt') }
-            post { always { node { archiveArtifacts(artifacts: 'trivy-auth-service.txt', allowEmptyArchive: true) } } }
+            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-auth-service.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan User Service') {
             steps { scanTrivy("${ECR_USER_SERVICE}", 'trivy-user-service.txt') }
-            post { always { node { archiveArtifacts(artifacts: 'trivy-user-service.txt', allowEmptyArchive: true) } } }
+            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-user-service.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan Restaurant Service') {
             steps { scanTrivy("${ECR_RESTAURANT_SERVICE}", 'trivy-restaurant-service.txt') }
-            post { always { node { archiveArtifacts(artifacts: 'trivy-restaurant-service.txt', allowEmptyArchive: true) } } }
+            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-restaurant-service.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan Menu Service') {
             steps { scanTrivy("${ECR_MENU_SERVICE}", 'trivy-menu-service.txt') }
-            post { always { node { archiveArtifacts(artifacts: 'trivy-menu-service.txt', allowEmptyArchive: true) } } }
+            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-menu-service.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan Cart Service') {
             steps { scanTrivy("${ECR_CART_SERVICE}", 'trivy-cart-service.txt') }
-            post { always { node { archiveArtifacts(artifacts: 'trivy-cart-service.txt', allowEmptyArchive: true) } } }
+            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-cart-service.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan Order Service') {
             steps { scanTrivy("${ECR_ORDER_SERVICE}", 'trivy-order-service.txt') }
-            post { always { node { archiveArtifacts(artifacts: 'trivy-order-service.txt', allowEmptyArchive: true) } } }
+            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-order-service.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan Payment Service') {
             steps { scanTrivy("${ECR_PAYMENT_SERVICE}", 'trivy-payment-service.txt') }
-            post { always { node { archiveArtifacts(artifacts: 'trivy-payment-service.txt', allowEmptyArchive: true) } } }
+            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-payment-service.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan Delivery Service') {
             steps { scanTrivy("${ECR_DELIVERY_SERVICE}", 'trivy-delivery-service.txt') }
-            post { always { node { archiveArtifacts(artifacts: 'trivy-delivery-service.txt', allowEmptyArchive: true) } } }
+            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-delivery-service.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Trivy Scan Frontend') {
             steps { scanTrivy("${ECR_FRONTEND}", 'trivy-frontend.txt') }
-            post { always { node { archiveArtifacts(artifacts: 'trivy-frontend.txt', allowEmptyArchive: true) } } }
+            post { always { node('any') { archiveArtifacts(artifacts: 'trivy-frontend.txt', allowEmptyArchive: true) } } }
         }
 
         stage('Push API Gateway') {
@@ -607,7 +607,7 @@ pipeline {
         }
 
         always {
-            node {
+            node('any') {
                 archiveArtifacts(
                     artifacts: 'gourmet-flow/infra/helm/gourmet-flow/values.yaml',
                     allowEmptyArchive: true
