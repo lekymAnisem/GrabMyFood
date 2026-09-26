@@ -81,7 +81,9 @@ pipeline {
                         docker --version
                         aws --version
                         trivy --version
-                        yq --version
+
+                # Check yq without failing if snap throws a warning
+                        yq --version || true
                     '''
                 }
             }
