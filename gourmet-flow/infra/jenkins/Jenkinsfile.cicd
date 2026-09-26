@@ -81,7 +81,6 @@ pipeline {
                         docker --version
                         aws --version
                         trivy --version
-                        snyk --version
                         yq --version
                     '''
                 }
