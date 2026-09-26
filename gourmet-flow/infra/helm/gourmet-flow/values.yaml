@@ -55,7 +55,7 @@ services:
       targetPort: 4000
     image:
       repository: grabmyfood-production-api-gateway
-      tag: "4"
+      tag: '13'
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4000"
@@ -94,7 +94,7 @@ services:
       targetPort: 4001
     image:
       repository: grabmyfood-production-auth-service
-      tag: "4"
+      tag: '13'
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4001"
@@ -133,7 +133,7 @@ services:
       targetPort: 4002
     image:
       repository: grabmyfood-production-user-service
-      tag: "4"
+      tag: '13'
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4002"
@@ -172,7 +172,7 @@ services:
       targetPort: 4003
     image:
       repository: grabmyfood-production-restaurant-service
-      tag: "4"
+      tag: '13'
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4003"
@@ -211,7 +211,7 @@ services:
       targetPort: 4004
     image:
       repository: grabmyfood-production-menu-service
-      tag: "4"
+      tag: '13'
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4004"
@@ -250,7 +250,7 @@ services:
       targetPort: 4005
     image:
       repository: grabmyfood-production-cart-service
-      tag: "4"
+      tag: '13'
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4005"
@@ -289,7 +289,7 @@ services:
       targetPort: 4006
     image:
       repository: grabmyfood-production-order-service
-      tag: "4"
+      tag: '13'
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4006"
@@ -328,7 +328,7 @@ services:
       targetPort: 4007
     image:
       repository: grabmyfood-production-payment-service
-      tag: "4"
+      tag: '13'
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4007"
@@ -367,7 +367,7 @@ services:
       targetPort: 4008
     image:
       repository: grabmyfood-production-delivery-service
-      tag: "4"
+      tag: '13'
       pullPolicy: IfNotPresent
     envVars:
       PORT: "4008"
@@ -407,7 +407,7 @@ services:
       targetPort: 8080
     image:
       repository: grabmyfood-production-frontend
-      tag: "4"
+      tag: '13'
       pullPolicy: IfNotPresent
     envVars: {}
     livenessProbe:
